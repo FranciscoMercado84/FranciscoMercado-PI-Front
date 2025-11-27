@@ -241,4 +241,13 @@ npm run dev
 - Vite: https://vitejs.dev/
 - Create React App: https://create-react-app.dev/
 - nvm-windows: https://github.com/coreybutler/nvm-windows
+ 
+## Diagramas
+
+En `docs/diagramas` se incluye un diagrama de referencia que muestra la vista global/arquitectura del frontend y sus dependencias.
+
+![Diagrama de vista global](./docs/diagramas/DiagramaVistaGlobal.png)
+
+- **Ruta relativa:** `./docs/diagramas/DiagramaVistaGlobal.png`
+- **Descripción:** Diagrama de alto nivel con los componentes principales (cliente React, API, proxy/local env). Úsalo como referencia para la arquitectura local y despliegue.
 
