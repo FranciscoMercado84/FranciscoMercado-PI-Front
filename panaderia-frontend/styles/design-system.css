@@ -1,0 +1,105 @@
+/* ============================================
+   DESIGN SYSTEM - PANADERÍA ARTESANAL
+   Versión: 1.0.0
+   Autor: Design System Team
+   ============================================ */
+
+/* --------------------------------------------
+   2. CSS VARIABLES (Custom Properties)
+   -------------------------------------------- */
+
+:root {
+  /* === COLORES PRIMARIOS === */
+  --color-primary: #D4941C;
+  --color-primary-hover: #B97D15;
+  --color-primary-active: #A06B12;
+  --color-primary-light: rgba(212, 148, 28, 0.1);
+  
+  /* === COLORES SECUNDARIOS === */
+  --color-secondary: #8B5A3C;
+  --color-secondary-hover: #744B31;
+  --color-secondary-active: #5E3D28;
+  --color-secondary-light: #C89B7E;
+  
+  /* === COLORES NEUTROS === */
+  --color-neutral-900: #2C1810;
+  --color-neutral-700: #6B5449;
+  --color-neutral-500: #998980;
+  --color-neutral-300: #E5DDD8;
+  --color-neutral-100: #FAF8F6;
+  --color-neutral-50: #FFFFFF;
+  --color-neutral-dark: #3A2618;
+  
+  /* === COLORES DE ESTADO === */
+  --color-success: #4A7C59;
+  --color-success-light: #E8F5EC;
+  --color-success-dark: #3D6549;
+  
+  --color-warning: #C87D2F;
+  --color-warning-light: #FFF4E6;
+  --color-warning-dark: #A06425;
+  
+  --color-error: #C1423F;
+  --color-error-light: #FDECEA;
+  --color-error-bg: #FFF9F8;
+  --color-error-dark: #9A3532;
+  
+  --color-info: #5B7C9E;
+  --color-info-light: #EDF2F7;
+  --color-info-dark: #49637E;
+  
+  /* === COLORES SEMÁNTICOS === */
+  --color-available: #5A8F69;
+  --color-sold-out: #857570;
+  --color-new: #E8A543;
+  --color-discount: #D64933;
+  
+  /* === TIPOGRAFÍA === */
+  --font-primary: 'Nunito Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Quicksand', 'Nunito Sans', sans-serif;
+  
+  /* Tamaños de fuente */
+  --font-size-h1: 48px;
+  --font-size-h2: 36px;
+  --font-size-h3: 28px;
+  --font-size-h4: 22px;
+  --font-size-h5: 18px;
+  --font-size-h6: 16px;
+  --font-size-body-lg: 20px;
+  --font-size-body-m: 16px;
+  --font-size-body-s: 14px;
+  --font-size-caption: 13px;
+  --font-size-badge: 12px;
+  
+  /* Pesos de fuente */
+  --font-weight-regular: 400;
+  --font-weight-medium: 600;
+  --font-weight-semibold: 700;
+  --font-weight-bold: 800;
+  
+  /* === ESPACIADO (8pt Grid) === */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+  --space-10: 64px;
+  --space-12: 80px;
+  
+  /* === BORDER RADIUS === */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+  
+  /* === SOMBRAS === */
+  --shadow-sm: 0 1px 2px rgba(44, 24, 16, 0.06);
+  --shadow-low: 0 1px 3px rgba(44, 24, 16, 0.12), 0 1px 2px rgba(44, 24, 16, 0.24);
+  --shadow-medium: 0 3px 6px rgba(44, 24, 16, 0.15), 0 2px 4px rgba(44, 24, 16, 0.12);
+  --shadow-high: 0 10px 20px rgba(44, 24, 16, 0.15), 0 3px 6px rgba(44, 24, 16, 0.10);
+}
