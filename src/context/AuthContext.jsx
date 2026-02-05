@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { authService } from '../services/api';
 
 const AuthContext = createContext(undefined);
 
@@ -6,19 +7,28 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const login = async (email, password, role = 'customer') => {
-    // Simulación de login - en producción esto sería una llamada a API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const mockUser = {
-      id: '123',
-      email,
-      role,
-      name: role === 'admin' ? 'Admin User' : 'Customer User'
-    };
-    
-    setUser(mockUser);
-    localStorage.setItem('user', JSON.stringify(mockUser));
+  const login = async (email, password) => {
+    try {
+      // Llamada real a la API del backend
+      const response = await authService.login(email, password);
+      
+      // Mapear la respuesta del backend a la estructura esperada
+      const userData = {
+        id: response.data.user.id || response.data.user._id,
+        email: response.data.user.email,
+        role: response.data.user.rol, // Mapear 'rol' del backend a 'role'
+        name: response.data.user.nombre || response.data.user.name,
+        token: response.data.access_token, // Guardar el token JWT
+      };
+      
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error en login:', error);
+      throw new Error(error.data?.message || 'Error al iniciar sesión');
+    }
   };
 
   const logout = () => {
