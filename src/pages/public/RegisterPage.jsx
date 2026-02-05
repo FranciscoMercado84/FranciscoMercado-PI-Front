@@ -2,41 +2,57 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import HFRegister from '../../../components/design-system/high-fidelity/HFRegister';
-import { LoadingState } from '../../components/states/LoadingState';
+import { authService } from '../../services/api';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleNavigate = async (screenId) => {
-    if (screenId === 'catalog' || screenId === 'register') {
-      // Usuario hace clic en "Crear Cuenta"
-      setIsLoading(true);
-      try {
-        // Simular registro y login automático
-        await login('newuser@example.com', 'password', 'customer');
-        navigate('/catalog', { replace: true });
-      } catch (err) {
-        setIsLoading(false);
-      }
-    } else {
-      const routes = {
-        'login': '/login',
-        'landing': '/'
-      };
+  const handleRegister = async (formData) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Registrar usuario
+      await authService.register({
+        nombre: formData.nombre,
+        email: formData.email,
+        password: formData.password,
+        telefono: formData.telefono,
+        cedula: formData.cedula
+      });
       
-      const route = routes[screenId];
-      if (route) {
-        navigate(route);
-      }
+      // Login automático después del registro
+      await login(formData.email, formData.password);
+      navigate('/catalog', { replace: true });
+    } catch (err) {
+      console.error('Error en registro:', err);
+      setError(err.message || 'Error al crear la cuenta. Por favor, intenta de nuevo.');
+      setIsLoading(false);
     }
   };
 
-  if (isLoading) {
-    return <LoadingState message="Creando tu cuenta..." />;
-  }
+  const handleNavigate = (screenId) => {
+    const routes = {
+      'login': '/login',
+      'landing': '/'
+    };
+    
+    const route = routes[screenId];
+    if (route) {
+      navigate(route);
+    }
+  };
 
-  return <HFRegister onNavigate={handleNavigate} />;
+  return (
+    <HFRegister 
+      onNavigate={handleNavigate} 
+      onRegister={handleRegister}
+      isLoading={isLoading}
+      error={error}
+    />
+  );
 };
 

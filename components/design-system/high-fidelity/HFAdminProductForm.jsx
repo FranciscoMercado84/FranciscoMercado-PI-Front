@@ -1,7 +1,68 @@
-import React from 'react';
-import { Package, Tag, DollarSign, Hash, FileText, Image as ImageIcon, Save, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Package, Tag, DollarSign, Hash, FileText, Image as ImageIcon, Save, X, Loader, AlertTriangle } from 'lucide-react';
 
-export default function HFAdminProductForm({ onNavigate }) {
+// Valores por defecto para un producto nuevo
+const defaultFormData = {
+  nombre: '',
+  categoria: '',
+  precio: '',
+  stock: '',
+  stock_minimo: '10',
+  descripcion: '',
+  disponible: true,
+  imagen: ''
+};
+
+export default function HFAdminProductForm({ product, onNavigate, onSubmit, isProcessing = false, categories = [] }) {
+  const [formData, setFormData] = useState(defaultFormData);
+  const isEditing = !!product;
+
+  // Cargar datos del producto si estamos editando
+  useEffect(() => {
+    if (product) {
+      setFormData({
+        nombre: product.nombre || product.name || '',
+        categoria: product.categoria || product.category || '',
+        precio: product.precio || product.price || '',
+        stock: product.stock ?? product.inventario ?? '',
+        stock_minimo: product.stock_minimo ?? 10,
+        descripcion: product.descripcion || product.description || '',
+        disponible: product.disponible ?? product.available ?? true,
+        imagen: product.imagen || product.image || ''
+      });
+    }
+  }, [product]);
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = () => {
+    // Validación básica
+    if (!formData.nombre.trim()) {
+      alert('El nombre del producto es requerido');
+      return;
+    }
+    if (!formData.precio || parseFloat(formData.precio) <= 0) {
+      alert('El precio debe ser mayor a 0');
+      return;
+    }
+
+    onSubmit?.({
+      nombre: formData.nombre.trim(),
+      categoria: formData.categoria || 'General',
+      precio: parseFloat(formData.precio),
+      stock: parseInt(formData.stock) || 0,
+      stock_minimo: parseInt(formData.stock_minimo) || 10,
+      descripcion: formData.descripcion.trim(),
+      disponible: formData.disponible,
+      imagen: formData.imagen
+    });
+  };
+
+  // Categorías por defecto si no se proporcionan
+  const categoryOptions = categories.length > 0 ? categories : ['Pan', 'Pastelería', 'Especiales', 'Bebidas'];
+
   return (
     <div style={{
       background: 'var(--color-neutral-100)',
@@ -17,14 +78,14 @@ export default function HFAdminProductForm({ onNavigate }) {
           color: 'var(--color-neutral-900)',
           marginBottom: 'var(--space-2)'
         }}>
-          Nuevo Producto
+          {isEditing ? 'Editar Producto' : 'Nuevo Producto'}
         </h1>
         <p style={{
           fontSize: 'var(--font-size-body-m)',
           color: 'var(--color-neutral-700)',
           marginBottom: 'var(--space-8)'
         }}>
-          Agrega un nuevo producto al catálogo
+          {isEditing ? 'Modifica los datos del producto' : 'Agrega un nuevo producto al catálogo'}
         </p>
 
         <div style={{
@@ -98,6 +159,8 @@ export default function HFAdminProductForm({ onNavigate }) {
                 <input
                   type="text"
                   placeholder="Ej: Baguette Francesa"
+                  value={formData.nombre}
+                  onChange={(e) => handleChange('nombre', e.target.value)}
                   style={{
                     width: '100%',
                     padding: 'var(--space-3) var(--space-4)',
@@ -131,7 +194,10 @@ export default function HFAdminProductForm({ onNavigate }) {
                   <Tag size={18} style={{ color: 'var(--color-secondary)' }} />
                   Categoría
                 </label>
-                <select style={{
+                <select 
+                  value={formData.categoria}
+                  onChange={(e) => handleChange('categoria', e.target.value)}
+                  style={{
                   width: '100%',
                   padding: 'var(--space-3) var(--space-4)',
                   border: '2px solid var(--color-neutral-300)',
@@ -141,10 +207,10 @@ export default function HFAdminProductForm({ onNavigate }) {
                   cursor: 'pointer',
                   background: 'white'
                 }}>
-                  <option>Selecciona una categoría...</option>
-                  <option>Pan</option>
-                  <option>Pastelería</option>
-                  <option>Especiales</option>
+                  <option value="">Selecciona una categoría...</option>
+                  {categoryOptions.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
                 </select>
               </div>
 
@@ -165,6 +231,8 @@ export default function HFAdminProductForm({ onNavigate }) {
                   type="number"
                   step="0.01"
                   placeholder="0.00"
+                  value={formData.precio}
+                  onChange={(e) => handleChange('precio', e.target.value)}
                   style={{
                     width: '100%',
                     padding: 'var(--space-3) var(--space-4)',
@@ -192,6 +260,8 @@ export default function HFAdminProductForm({ onNavigate }) {
                 <input
                   type="number"
                   placeholder="0"
+                  value={formData.stock}
+                  onChange={(e) => handleChange('stock', e.target.value)}
                   style={{
                     width: '100%',
                     padding: 'var(--space-3) var(--space-4)',
@@ -201,6 +271,42 @@ export default function HFAdminProductForm({ onNavigate }) {
                     outline: 'none'
                   }}
                 />
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  fontSize: 'var(--font-size-body-m)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  color: 'var(--color-neutral-900)',
+                  marginBottom: 'var(--space-2)'
+                }}>
+                  <AlertTriangle size={18} style={{ color: 'var(--color-warning)' }} />
+                  Stock Mínimo (Alerta)
+                </label>
+                <input
+                  type="number"
+                  placeholder="10"
+                  value={formData.stock_minimo}
+                  onChange={(e) => handleChange('stock_minimo', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: 'var(--space-3) var(--space-4)',
+                    border: '2px solid var(--color-neutral-300)',
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: 'var(--font-size-body-m)',
+                    outline: 'none'
+                  }}
+                />
+                <p style={{
+                  fontSize: 'var(--font-size-caption)',
+                  color: 'var(--color-neutral-500)',
+                  marginTop: 'var(--space-1)'
+                }}>
+                  Se mostrará alerta cuando el stock sea menor a este valor
+                </p>
               </div>
             </div>
 
@@ -221,6 +327,8 @@ export default function HFAdminProductForm({ onNavigate }) {
               <textarea
                 rows={4}
                 placeholder="Describe el producto..."
+                value={formData.descripcion}
+                onChange={(e) => handleChange('descripcion', e.target.value)}
                 style={{
                   width: '100%',
                   padding: 'var(--space-3) var(--space-4)',
@@ -243,7 +351,12 @@ export default function HFAdminProductForm({ onNavigate }) {
                 fontSize: 'var(--font-size-body-m)',
                 cursor: 'pointer'
               }}>
-                <input type="checkbox" defaultChecked style={{ cursor: 'pointer' }} />
+                <input 
+                  type="checkbox" 
+                  checked={formData.disponible}
+                  onChange={(e) => handleChange('disponible', e.target.checked)}
+                  style={{ cursor: 'pointer' }} 
+                />
                 <span style={{ fontWeight: 'var(--font-weight-medium)' }}>
                   Producto disponible para la venta
                 </span>
@@ -260,35 +373,42 @@ export default function HFAdminProductForm({ onNavigate }) {
             paddingTop: 'var(--space-6)',
             borderTop: '1px solid var(--color-neutral-300)'
           }}>
-            <button style={{
+            <button 
+            onClick={() => onNavigate?.('products')}
+            disabled={isProcessing}
+            style={{
               padding: 'var(--space-4)',
               background: 'white',
               border: '2px solid var(--color-neutral-300)',
               borderRadius: 'var(--radius-lg)',
               fontSize: 'var(--font-size-body-m)',
               fontWeight: 'var(--font-weight-semibold)',
-              cursor: 'pointer',
+              cursor: isProcessing ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 'var(--space-2)',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              opacity: isProcessing ? 0.6 : 1
             }}
-            onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--color-neutral-500)'}
+            onMouseEnter={(e) => !isProcessing && (e.currentTarget.style.borderColor = 'var(--color-neutral-500)')}
             onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-neutral-300)'}
             >
               <X size={20} />
               Cancelar
             </button>
-            <button style={{
+            <button 
+            onClick={handleSubmit}
+            disabled={isProcessing}
+            style={{
               padding: 'var(--space-4)',
-              background: 'var(--color-secondary)',
+              background: isProcessing ? 'var(--color-neutral-400)' : 'var(--color-secondary)',
               color: 'white',
               border: 'none',
               borderRadius: 'var(--radius-lg)',
               fontSize: 'var(--font-size-body-m)',
               fontWeight: 'var(--font-weight-semibold)',
-              cursor: 'pointer',
+              cursor: isProcessing ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -297,18 +417,22 @@ export default function HFAdminProductForm({ onNavigate }) {
               transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--color-secondary-hover)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-high)';
+              if (!isProcessing) {
+                e.currentTarget.style.background = 'var(--color-secondary-hover)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-high)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--color-secondary)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+              if (!isProcessing) {
+                e.currentTarget.style.background = 'var(--color-secondary)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+              }
             }}
             >
-              <Save size={20} />
-              Guardar Producto
+              {isProcessing ? <Loader size={20} className="animate-spin" /> : <Save size={20} />}
+              {isProcessing ? 'Guardando...' : (isEditing ? 'Actualizar Producto' : 'Guardar Producto')}
             </button>
           </div>
         </div>

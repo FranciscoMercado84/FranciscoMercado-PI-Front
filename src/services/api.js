@@ -151,7 +151,7 @@ export const authService = {
    * Iniciar sesión
    * @param {string} email - Correo del usuario
    * @param {string} password - Contraseña
-   * @returns {Promise<{user: object, access_token: string}>}
+   * @returns {Promise<{data: {user: object, access_token: string}}>}
    */
   async login(email, password) {
     return await apiClient.post('/auth/login', { email, password }, { auth: false });
@@ -160,10 +160,18 @@ export const authService = {
   /**
    * Registrar nuevo usuario
    * @param {object} userData - Datos del usuario (email, password, nombre, etc.)
-   * @returns {Promise<{user: object, access_token: string}>}
+   * @returns {Promise<{data: {user: object, access_token: string}}>}
    */
   async register(userData) {
     return await apiClient.post('/auth/register', userData, { auth: false });
+  },
+
+  /**
+   * Obtener perfil del usuario autenticado
+   * @returns {Promise<object>}
+   */
+  async getProfile() {
+    return await apiClient.get('/auth/profile');
   },
 };
 
@@ -174,40 +182,40 @@ export const productService = {
   /**
    * Obtener todos los productos
    * @param {object} params - Parámetros de búsqueda (filtros, paginación, etc.)
-   * @returns {Promise<Array>}
+   * @returns {Promise<{data: Array}>}
    */
   async getAll(params = {}) {
     const queryString = new URLSearchParams(params).toString();
-    const endpoint = queryString ? `/products?${queryString}` : '/products';
+    const endpoint = queryString ? `/productos?${queryString}` : '/productos';
     return await apiClient.get(endpoint, { auth: false });
   },
 
   /**
    * Obtener un producto por ID
    * @param {string} id - ID del producto
-   * @returns {Promise<object>}
+   * @returns {Promise<{data: object}>}
    */
   async getById(id) {
-    return await apiClient.get(`/products/${id}`, { auth: false });
+    return await apiClient.get(`/productos/${id}`, { auth: false });
   },
 
   /**
    * Crear un nuevo producto (admin)
    * @param {object} productData - Datos del producto
-   * @returns {Promise<object>}
+   * @returns {Promise<{data: object}>}
    */
   async create(productData) {
-    return await apiClient.post('/products', productData);
+    return await apiClient.post('/productos', productData);
   },
 
   /**
    * Actualizar un producto (admin)
    * @param {string} id - ID del producto
    * @param {object} productData - Datos actualizados
-   * @returns {Promise<object>}
+   * @returns {Promise<{data: object}>}
    */
   async update(id, productData) {
-    return await apiClient.put(`/products/${id}`, productData);
+    return await apiClient.put(`/productos/${id}`, productData);
   },
 
   /**
@@ -216,40 +224,107 @@ export const productService = {
    * @returns {Promise<void>}
    */
   async delete(id) {
-    return await apiClient.delete(`/products/${id}`);
+    return await apiClient.delete(`/productos/${id}`);
+  },
+
+  // ============== GESTIÓN DE INVENTARIO ==============
+
+  /**
+   * Obtener productos con stock bajo (admin)
+   * @returns {Promise<{data: Array}>}
+   */
+  async getStockBajo() {
+    return await apiClient.get('/productos/inventario/bajo-stock');
+  },
+
+  /**
+   * Obtener productos agotados (admin)
+   * @returns {Promise<{data: Array}>}
+   */
+  async getAgotados() {
+    return await apiClient.get('/productos/inventario/agotados');
+  },
+
+  /**
+   * Actualizar stock de un producto (admin)
+   * @param {string} id - ID del producto
+   * @param {string} operacion - 'agregar', 'reducir' o 'establecer'
+   * @param {number} cantidad - Cantidad a modificar
+   * @returns {Promise<{data: object}>}
+   */
+  async updateStock(id, operacion, cantidad) {
+    return await apiClient.put(`/productos/${id}/stock`, { operacion, cantidad });
+  },
+
+  // ============== GESTIÓN DE IMÁGENES ==============
+
+  /**
+   * Subir imagen de un producto a Cloudinary (admin)
+   * @param {string} id - ID del producto
+   * @param {File} imageFile - Archivo de imagen
+   * @returns {Promise<{data: {imagen_url: string, imagen_public_id: string}}>}
+   */
+  async uploadImage(id, imageFile) {
+    const formData = new FormData();
+    formData.append('imagen', imageFile);
+
+    const token = apiClient.getAuthToken();
+    const response = await fetch(`${apiClient.baseURL}/productos/${id}/imagen`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Error al subir imagen');
+    }
+
+    return await response.json();
+  },
+
+  /**
+   * Eliminar imagen de un producto (admin)
+   * @param {string} id - ID del producto
+   * @returns {Promise<{data: {message: string}}>}
+   */
+  async deleteImage(id) {
+    return await apiClient.delete(`/productos/${id}/imagen`);
   },
 };
 
 /**
  * Servicio de carrito de compras
  */
-export const cartService = {
+export const carritoService = {
   /**
    * Obtener el carrito del usuario actual
-   * @returns {Promise<object>}
+   * @returns {Promise<{data: object}>}
    */
   async get() {
-    return await apiClient.get('/cart');
+    return await apiClient.get('/carrito');
   },
 
   /**
    * Agregar un producto al carrito
-   * @param {string} productId - ID del producto
-   * @param {number} quantity - Cantidad
-   * @returns {Promise<object>}
+   * @param {string} productoId - ID del producto
+   * @param {number} cantidad - Cantidad
+   * @returns {Promise<{data: object}>}
    */
-  async add(productId, quantity = 1) {
-    return await apiClient.post('/cart/items', { productId, quantity });
+  async addItem(productoId, cantidad = 1) {
+    return await apiClient.post('/carrito/items', { productoId, cantidad });
   },
 
   /**
    * Actualizar la cantidad de un producto en el carrito
    * @param {string} itemId - ID del item en el carrito
-   * @param {number} quantity - Nueva cantidad
-   * @returns {Promise<object>}
+   * @param {number} cantidad - Nueva cantidad
+   * @returns {Promise<{data: object}>}
    */
-  async update(itemId, quantity) {
-    return await apiClient.put(`/cart/items/${itemId}`, { quantity });
+  async updateItem(itemId, cantidad) {
+    return await apiClient.put(`/carrito/items/${itemId}`, { cantidad });
   },
 
   /**
@@ -257,8 +332,8 @@ export const cartService = {
    * @param {string} itemId - ID del item en el carrito
    * @returns {Promise<void>}
    */
-  async remove(itemId) {
-    return await apiClient.delete(`/cart/items/${itemId}`);
+  async removeItem(itemId) {
+    return await apiClient.delete(`/carrito/items/${itemId}`);
   },
 
   /**
@@ -266,58 +341,61 @@ export const cartService = {
    * @returns {Promise<void>}
    */
   async clear() {
-    return await apiClient.delete('/cart');
+    return await apiClient.delete('/carrito');
   },
 };
 
 /**
- * Servicio de órdenes
+ * Servicio de pedidos
  */
-export const orderService = {
+export const pedidoService = {
   /**
-   * Crear una nueva orden
-   * @param {object} orderData - Datos de la orden (dirección, método de pago, etc.)
-   * @returns {Promise<object>}
+   * Crear un nuevo pedido desde el carrito
+   * @param {object} pedidoData - Datos del pedido (dirección, método de pago, etc.)
+   * @returns {Promise<{data: object}>}
    */
-  async create(orderData) {
-    return await apiClient.post('/orders', orderData);
+  async create(pedidoData) {
+    return await apiClient.post('/pedidos', pedidoData);
   },
 
   /**
-   * Obtener todas las órdenes del usuario
-   * @returns {Promise<Array>}
+   * Obtener los pedidos del usuario autenticado
+   * @returns {Promise<{data: Array}>}
    */
-  async getAll() {
-    return await apiClient.get('/orders');
+  async getMisPedidos() {
+    return await apiClient.get('/pedidos');
   },
 
   /**
-   * Obtener una orden por ID
-   * @param {string} id - ID de la orden
-   * @returns {Promise<object>}
+   * Obtener un pedido por ID
+   * @param {string} id - ID del pedido
+   * @returns {Promise<{data: object}>}
    */
   async getById(id) {
-    return await apiClient.get(`/orders/${id}`);
+    return await apiClient.get(`/pedidos/${id}`);
   },
 
   /**
-   * Cancelar una orden
-   * @param {string} id - ID de la orden
-   * @returns {Promise<object>}
+   * Obtener todos los pedidos (admin)
+   * @returns {Promise<{data: Array}>}
    */
-  async cancel(id) {
-    return await apiClient.put(`/orders/${id}/cancel`);
+  async getAllPedidos() {
+    return await apiClient.get('/pedidos/admin/all');
   },
 
   /**
-   * Actualizar estado de una orden (admin)
-   * @param {string} id - ID de la orden
-   * @param {string} status - Nuevo estado
-   * @returns {Promise<object>}
+   * Actualizar estado de un pedido (admin)
+   * @param {string} id - ID del pedido
+   * @param {string} estado - Nuevo estado
+   * @returns {Promise<{data: object}>}
    */
-  async updateStatus(id, status) {
-    return await apiClient.put(`/orders/${id}/status`, { status });
+  async updateEstado(id, estado) {
+    return await apiClient.put(`/pedidos/${id}/estado`, { estado });
   },
 };
+
+// Mantener compatibilidad con nombres anteriores
+export const cartService = carritoService;
+export const orderService = pedidoService;
 
 export default apiClient;

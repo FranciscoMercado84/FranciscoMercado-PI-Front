@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import HFAdminLogin from '../../../components/design-system/high-fidelity/HFAdminLogin';
-import { LoadingState } from '../../components/states/LoadingState';
-import { ErrorState } from '../../components/states/ErrorState';
 
 export const AdminLoginPage = () => {
   const navigate = useNavigate();
@@ -12,43 +10,41 @@ export const AdminLoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleNavigate = async (screenId) => {
-    if (screenId === 'dashboard' || screenId === 'admin-dashboard') {
-      setIsLoading(true);
-      setError(null);
+  const handleLogin = async (email, password) => {
+    if (!email || !password) {
+      setError('Por favor, ingresa tu email y contraseña');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Login como administrador - el backend verificará el rol
+      await login(email, password, 'admin');
       
-      try {
-        // Login como administrador
-        await login('admin@panaderia.com', 'admin123', 'admin');
-        
-        const from = location.state?.from?.pathname || '/admin/dashboard';
-        navigate(from, { replace: true });
-      } catch (err) {
-        setError('Error al iniciar sesión como administrador.');
-        setIsLoading(false);
-      }
-    } else if (screenId === 'landing') {
+      const from = location.state?.from?.pathname || '/admin/dashboard';
+      navigate(from, { replace: true });
+    } catch (err) {
+      console.error('Error en admin login:', err);
+      setError(err.message || 'Credenciales inválidas o sin permisos de administrador.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleNavigate = (screenId) => {
+    if (screenId === 'landing') {
       navigate('/');
     }
   };
 
-  if (isLoading) {
-    return <LoadingState message="Iniciando sesión como administrador..." />;
-  }
-
-  if (error) {
-    return (
-      <ErrorState 
-        title="Error de autenticación" 
-        message={error}
-        onRetry={() => {
-          setError(null);
-          navigate('/admin/login');
-        }}
-      />
-    );
-  }
-
-  return <HFAdminLogin onNavigate={handleNavigate} />;
+  return (
+    <HFAdminLogin 
+      onNavigate={handleNavigate} 
+      onLogin={handleLogin}
+      isLoading={isLoading}
+      error={error}
+    />
+  );
 };
 

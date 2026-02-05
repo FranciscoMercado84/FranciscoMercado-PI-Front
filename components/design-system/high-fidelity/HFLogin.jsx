@@ -1,7 +1,16 @@
-import React from 'react';
-import { Mail, Lock, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Mail, Lock, ArrowRight, Loader } from 'lucide-react';
 
-export default function HFLogin({ onNavigate }) {
+export default function HFLogin({ onNavigate, onLogin, isLoading = false, error = null }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e) => {
+    e?.preventDefault();
+    if (onLogin) {
+      onLogin(email, password);
+    }
+  };
   return (
     <div style={{
       background: 'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-secondary-light) 100%)',
@@ -76,6 +85,9 @@ export default function HFLogin({ onNavigate }) {
             <input
               type="email"
               placeholder="tu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
               style={{
                 width: '100%',
                 padding: 'var(--space-4)',
@@ -113,6 +125,10 @@ export default function HFLogin({ onNavigate }) {
             <input
               type="password"
               placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isLoading}
+              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               style={{
                 width: '100%',
                 padding: 'var(--space-4)',
@@ -132,6 +148,21 @@ export default function HFLogin({ onNavigate }) {
               }}
             />
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div style={{
+              padding: 'var(--space-3) var(--space-4)',
+              background: 'var(--color-error-light)',
+              border: '1px solid var(--color-error)',
+              borderRadius: 'var(--radius-lg)',
+              color: 'var(--color-error-dark)',
+              fontSize: 'var(--font-size-body-s)',
+              textAlign: 'center'
+            }}>
+              {error}
+            </div>
+          )}
 
           {/* Remember & Forgot */}
           <div style={{
@@ -168,36 +199,51 @@ export default function HFLogin({ onNavigate }) {
 
           {/* Submit Button */}
           <button 
-          onClick={() => onNavigate?.('catalog')}
+          onClick={handleSubmit}
+          disabled={isLoading || !email || !password}
           style={{
             padding: 'var(--space-4)',
-            background: 'var(--color-primary)',
+            background: isLoading ? 'var(--color-neutral-400)' : 'var(--color-primary)',
             color: 'white',
             border: 'none',
             borderRadius: 'var(--radius-lg)',
             fontSize: 'var(--font-size-h6)',
             fontWeight: 'var(--font-weight-semibold)',
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 'var(--space-2)',
             boxShadow: 'var(--shadow-medium)',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            opacity: (!email || !password) ? 0.7 : 1
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--color-primary-hover)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = 'var(--shadow-high)';
+            if (!isLoading) {
+              e.currentTarget.style.background = 'var(--color-primary-hover)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-high)';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--color-primary)';
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+            if (!isLoading) {
+              e.currentTarget.style.background = 'var(--color-primary)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+            }
           }}
           >
-            Iniciar Sesión
-            <ArrowRight size={20} />
+            {isLoading ? (
+              <>
+                <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                Iniciando...
+              </>
+            ) : (
+              <>
+                Iniciar Sesión
+                <ArrowRight size={20} />
+              </>
+            )}
           </button>
 
           {/* Divider */}

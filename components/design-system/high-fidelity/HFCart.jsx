@@ -1,16 +1,62 @@
 import React from 'react';
 import { Trash2, Plus, Minus, ArrowRight, Tag } from 'lucide-react';
 
-export default function HFCart({ onNavigate }) {
-  const cartItems = [
-    { id: 1, name: 'Baguette Francesa', price: 3.50, quantity: 2, emoji: '🥖' },
-    { id: 2, name: 'Croissant Mantequilla', price: 2.80, quantity: 3, emoji: '🥐' },
-    { id: 3, name: 'Pan Integral', price: 4.20, quantity: 1, emoji: '🍞' },
-  ];
+// Items por defecto cuando no se pasan props
+const defaultCartItems = [
+  { id: 1, name: 'Baguette Francesa', price: 3.50, quantity: 2, emoji: '🥖' },
+  { id: 2, name: 'Croissant Mantequilla', price: 2.80, quantity: 3, emoji: '🥐' },
+  { id: 3, name: 'Pan Integral', price: 4.20, quantity: 1, emoji: '🍞' },
+];
+
+// Mapa de emojis por categoría
+const categoryEmojis = {
+  'Pan': '🍞',
+  'Panadería': '🥖',
+  'Pastelería': '🥐',
+  'Especiales': '🧄',
+  'default': '🥯'
+};
+
+export default function HFCart({ 
+  onNavigate, 
+  cart: propCart,
+  onUpdateQuantity,
+  onRemoveItem,
+  onClearCart
+}) {
+  // Normalizar items del carrito
+  const normalizeCartItem = (item) => {
+    const producto = item.producto || item;
+    return {
+      id: item.id || item._id,
+      productoId: producto._id || producto.id || item.productoId,
+      name: producto.name || producto.nombre || item.name || item.nombre,
+      price: producto.price || producto.precio || item.price || item.precio || 0,
+      quantity: item.quantity || item.cantidad || 1,
+      image: producto.image || producto.imagen_url || producto.imagen || item.image,
+      emoji: producto.emoji || categoryEmojis[producto.category || producto.categoria] || categoryEmojis.default,
+      description: producto.description || producto.descripcion || item.description
+    };
+  };
+
+  // Usar carrito de props o el por defecto
+  const rawItems = propCart?.items || propCart?.productos || propCart || defaultCartItems;
+  const cartItems = Array.isArray(rawItems) ? rawItems.map(normalizeCartItem) : [];
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const tax = subtotal * 0.13;
   const total = subtotal + tax;
+
+  const handleQuantityChange = (item, delta) => {
+    const newQuantity = item.quantity + delta;
+    if (newQuantity < 1) {
+      if (onRemoveItem) {
+        onRemoveItem(item.id);
+      }
+    } else if (onUpdateQuantity) {
+      onUpdateQuantity(item.id, newQuantity);
+    }
+  };
 
   return (
     <div style={{
@@ -75,9 +121,25 @@ export default function HFCart({ onNavigate }) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '48px',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    overflow: 'hidden'
                   }}>
-                    {item.emoji}
+                    {item.image ? (
+                      <img 
+                        src={item.image} 
+                        alt={item.name}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      item.emoji
+                    )}
                   </div>
 
                   {/* Product Info */}
@@ -95,7 +157,7 @@ export default function HFCart({ onNavigate }) {
                       color: 'var(--color-neutral-700)',
                       marginBottom: 'var(--space-3)'
                     }}>
-                      Pan artesanal fresco
+                      {item.description || 'Producto artesanal'}
                     </p>
                     <div style={{
                       fontSize: 'var(--font-size-h6)',
@@ -114,7 +176,9 @@ export default function HFCart({ onNavigate }) {
                     borderRadius: 'var(--radius-lg)',
                     overflow: 'hidden'
                   }}>
-                    <button style={{
+                    <button 
+                    onClick={() => handleQuantityChange(item, -1)}
+                    style={{
                       padding: 'var(--space-2) var(--space-3)',
                       background: 'transparent',
                       border: 'none',
@@ -138,7 +202,9 @@ export default function HFCart({ onNavigate }) {
                     }}>
                       {item.quantity}
                     </div>
-                    <button style={{
+                    <button 
+                    onClick={() => handleQuantityChange(item, 1)}
+                    style={{
                       padding: 'var(--space-2) var(--space-3)',
                       background: 'transparent',
                       border: 'none',
@@ -165,7 +231,9 @@ export default function HFCart({ onNavigate }) {
                   </div>
 
                   {/* Remove Button */}
-                  <button style={{
+                  <button 
+                  onClick={() => onRemoveItem?.(item.id)}
+                  style={{
                     padding: 'var(--space-2)',
                     background: 'transparent',
                     border: 'none',

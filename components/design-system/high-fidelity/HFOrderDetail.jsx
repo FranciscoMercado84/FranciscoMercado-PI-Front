@@ -1,12 +1,76 @@
 import React from 'react';
-import { Package, Calendar, Clock, MapPin, CheckCircle, Download, X, ArrowLeft } from 'lucide-react';
+import { Package, Calendar, Clock, MapPin, CheckCircle, Download, X, ArrowLeft, AlertCircle, Loader } from 'lucide-react';
 
-export default function HFOrderDetail({ onNavigate, isAdmin = false }) {
-  const orderItems = [
+// Configuración de estados
+const statusConfig = {
+  pending: { label: 'Pendiente', icon: AlertCircle, bgColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)', textColor: 'var(--color-warning-dark)' },
+  pendiente: { label: 'Pendiente', icon: AlertCircle, bgColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)', textColor: 'var(--color-warning-dark)' },
+  processing: { label: 'En Proceso', icon: Loader, bgColor: 'var(--color-info-light, #e0f2fe)', borderColor: 'var(--color-info, #0ea5e9)', textColor: 'var(--color-info-dark, #0369a1)' },
+  en_proceso: { label: 'En Proceso', icon: Loader, bgColor: 'var(--color-info-light, #e0f2fe)', borderColor: 'var(--color-info, #0ea5e9)', textColor: 'var(--color-info-dark, #0369a1)' },
+  completed: { label: 'Completado', icon: CheckCircle, bgColor: 'var(--color-success-light)', borderColor: 'var(--color-success)', textColor: 'var(--color-success-dark)' },
+  completado: { label: 'Completado', icon: CheckCircle, bgColor: 'var(--color-success-light)', borderColor: 'var(--color-success)', textColor: 'var(--color-success-dark)' },
+  entregado: { label: 'Entregado', icon: CheckCircle, bgColor: 'var(--color-success-light)', borderColor: 'var(--color-success)', textColor: 'var(--color-success-dark)' },
+  cancelled: { label: 'Cancelado', icon: X, bgColor: 'var(--color-error-light)', borderColor: 'var(--color-error)', textColor: 'var(--color-error-dark)' },
+  cancelado: { label: 'Cancelado', icon: X, bgColor: 'var(--color-error-light)', borderColor: 'var(--color-error)', textColor: 'var(--color-error-dark)' }
+};
+
+// Datos mock por defecto
+const defaultOrder = {
+  id: 'ORD-285',
+  status: 'completed',
+  date: '5 de Enero, 2026',
+  pickupTime: '14:00 - 15:00',
+  location: 'Av. Central, San José',
+  items: [
     { name: 'Baguette Francesa', qty: 2, price: 3.50 },
     { name: 'Croissant Mantequilla', qty: 3, price: 2.80 },
     { name: 'Pan Integral', qty: 1, price: 4.20 }
-  ];
+  ],
+  subtotal: 19.60,
+  tax: 2.55,
+  total: 22.15
+};
+
+export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = false }) {
+  // Normalizar el pedido
+  const normalizeOrder = (o) => {
+    if (!o) return defaultOrder;
+    
+    // Normalizar items
+    const items = (o.items || o.productos || []).map(item => ({
+      name: item.name || item.nombre || item.producto?.nombre || 'Producto',
+      qty: item.qty || item.quantity || item.cantidad || 1,
+      price: item.price || item.precio || item.producto?.precio || 0
+    }));
+    
+    // Calcular totales
+    const subtotal = o.subtotal || items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+    const tax = o.tax || o.impuesto || (subtotal * 0.13);
+    const total = o.total || (subtotal + tax);
+    
+    // Formatear fecha
+    let dateFormatted = o.date || o.fecha;
+    if (o.createdAt || o.fechaCreacion) {
+      const d = new Date(o.createdAt || o.fechaCreacion);
+      dateFormatted = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    
+    return {
+      id: o.id || o._id || o.orderId || 'N/A',
+      status: o.status || o.estado || 'pending',
+      date: dateFormatted || 'Fecha no disponible',
+      pickupTime: o.pickupTime || o.horaRecogida || o.horarioRetiro || 'No especificado',
+      location: o.location || o.ubicacion || o.direccion || 'Av. Central, San José',
+      items,
+      subtotal,
+      tax,
+      total
+    };
+  };
+
+  const order = normalizeOrder(propOrder);
+  const status = statusConfig[order.status] || statusConfig.pending;
+  const StatusIcon = status.icon;
 
   return (
     <div style={{
@@ -34,22 +98,22 @@ export default function HFOrderDetail({ onNavigate, isAdmin = false }) {
               color: 'var(--color-neutral-900)',
               marginBottom: 'var(--space-2)'
             }}>
-              Pedido #ORD-285
+              Pedido #{String(order.id).slice(-8).toUpperCase()}
             </h1>
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 'var(--space-2)',
               padding: 'var(--space-2) var(--space-4)',
-              background: 'var(--color-success-light)',
+              background: status.bgColor,
               borderRadius: 'var(--radius-full)',
-              border: '1px solid var(--color-success)',
+              border: `1px solid ${status.borderColor}`,
               fontSize: 'var(--font-size-body-s)',
               fontWeight: 'var(--font-weight-bold)',
-              color: 'var(--color-success-dark)'
+              color: status.textColor
             }}>
-              <CheckCircle size={16} />
-              Completado
+              <StatusIcon size={16} />
+              {status.label}
             </div>
           </div>
           <button style={{
@@ -87,10 +151,10 @@ export default function HFOrderDetail({ onNavigate, isAdmin = false }) {
           marginBottom: 'var(--space-6)'
         }}>
           {[
-            { icon: Calendar, label: 'Fecha del Pedido', value: '5 de Enero, 2026' },
-            { icon: Clock, label: 'Hora de Recogida', value: '14:00 - 15:00' },
-            { icon: MapPin, label: 'Ubicación', value: 'Av. Central, San José' },
-            { icon: Package, label: 'Total de Productos', value: '6 productos' }
+            { icon: Calendar, label: 'Fecha del Pedido', value: order.date },
+            { icon: Clock, label: 'Hora de Recogida', value: order.pickupTime },
+            { icon: MapPin, label: 'Ubicación', value: order.location },
+            { icon: Package, label: 'Total de Productos', value: `${order.items.reduce((sum, i) => sum + i.qty, 0)} productos` }
           ].map((item, i) => (
             <div key={i} style={{
               background: 'white',
@@ -153,13 +217,13 @@ export default function HFOrderDetail({ onNavigate, isAdmin = false }) {
             Productos
           </h2>
 
-          {orderItems.map((item, i) => (
+          {order.items.map((item, i) => (
             <div key={i} style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               padding: 'var(--space-4) 0',
-              borderBottom: i < orderItems.length - 1 ? '1px solid var(--color-neutral-300)' : 'none'
+              borderBottom: i < order.items.length - 1 ? '1px solid var(--color-neutral-300)' : 'none'
             }}>
               <div>
                 <div style={{
@@ -197,7 +261,7 @@ export default function HFOrderDetail({ onNavigate, isAdmin = false }) {
               color: 'var(--color-neutral-700)'
             }}>
               <span>Subtotal:</span>
-              <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>$19.60</span>
+              <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>${order.subtotal.toFixed(2)}</span>
             </div>
             <div style={{
               display: 'flex',
@@ -207,7 +271,7 @@ export default function HFOrderDetail({ onNavigate, isAdmin = false }) {
               color: 'var(--color-neutral-700)'
             }}>
               <span>IVA (13%):</span>
-              <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>$2.55</span>
+              <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>${order.tax.toFixed(2)}</span>
             </div>
             <div style={{
               display: 'flex',
@@ -218,7 +282,7 @@ export default function HFOrderDetail({ onNavigate, isAdmin = false }) {
               fontWeight: 'var(--font-weight-bold)'
             }}>
               <span>Total:</span>
-              <span style={{ color: 'var(--color-primary)' }}>$22.15</span>
+              <span style={{ color: 'var(--color-primary)' }}>${order.total.toFixed(2)}</span>
             </div>
           </div>
         </div>

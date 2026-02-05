@@ -2,7 +2,38 @@ import React from 'react';
 import HFFooter from './HFFooter';
 import { ArrowRight, Star, Clock, Award } from 'lucide-react';
 
-export default function HFLanding({ onNavigate }) {
+// Productos destacados por defecto
+const defaultFeaturedProducts = [
+  { id: 1, name: 'Baguette', description: 'Pan artesanal horneado fresco cada día', price: 5.00, emoji: '🥖' },
+  { id: 2, name: 'Croissant', description: 'Pan artesanal horneado fresco cada día', price: 7.00, emoji: '🥐' },
+  { id: 3, name: 'Pan Integral', description: 'Pan artesanal horneado fresco cada día', price: 9.00, emoji: '🍞' },
+  { id: 4, name: 'Bagel', description: 'Pan artesanal horneado fresco cada día', price: 11.00, emoji: '🥯' }
+];
+
+// Emojis para categorías
+const categoryEmojis = {
+  'Pan': '🥖',
+  'Pastelería': '🥐',
+  'Especiales': '🍞',
+  'Bebidas': '☕',
+  'default': '🥯'
+};
+
+export default function HFLanding({ onNavigate, featuredProducts: propProducts, onAddToCart }) {
+  // Normalizar productos
+  const normalizeProduct = (p, index) => ({
+    id: p.id || p._id || index,
+    name: p.name || p.nombre || 'Producto',
+    description: p.description || p.descripcion || 'Pan artesanal horneado fresco cada día',
+    price: p.price || p.precio || 0,
+    image: p.image || p.imagen,
+    emoji: categoryEmojis[p.category || p.categoria] || categoryEmojis.default,
+    category: p.category || p.categoria
+  });
+
+  const featuredProducts = (propProducts && propProducts.length > 0)
+    ? propProducts.slice(0, 4).map(normalizeProduct)
+    : defaultFeaturedProducts;
   return (
     <div style={{
       background: 'var(--color-neutral-100)',
@@ -243,8 +274,8 @@ export default function HFLanding({ onNavigate }) {
             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
             gap: 'var(--space-6)'
           }}>
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} style={{
+            {featuredProducts.map((product, i) => (
+              <div key={product.id} style={{
                 background: 'white',
                 borderRadius: 'var(--radius-xl)',
                 overflow: 'hidden',
@@ -252,6 +283,7 @@ export default function HFLanding({ onNavigate }) {
                 transition: 'all 0.3s',
                 cursor: 'pointer'
               }}
+              onClick={() => onNavigate?.('product-detail', product.id)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-4px)';
                 e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
@@ -263,14 +295,14 @@ export default function HFLanding({ onNavigate }) {
               >
                 <div style={{
                   aspectRatio: '4/3',
-                  background: 'var(--color-neutral-300)',
+                  background: product.image ? `url(${product.image}) center/cover` : 'var(--color-neutral-300)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '64px',
                   position: 'relative'
                 }}>
-                  {i === 1 ? '🥖' : i === 2 ? '🥐' : i === 3 ? '🍞' : '🥯'}
+                  {!product.image && product.emoji}
                   <div style={{
                     position: 'absolute',
                     top: 'var(--space-3)',
@@ -282,7 +314,7 @@ export default function HFLanding({ onNavigate }) {
                     fontSize: 'var(--font-size-badge)',
                     fontWeight: 'var(--font-weight-bold)'
                   }}>
-                    Nuevo
+                    Destacado
                   </div>
                 </div>
                 <div style={{ padding: 'var(--space-5)' }}>
@@ -292,7 +324,7 @@ export default function HFLanding({ onNavigate }) {
                     color: 'var(--color-neutral-900)',
                     marginBottom: 'var(--space-2)'
                   }}>
-                    {i === 1 ? 'Baguette' : i === 2 ? 'Croissant' : i === 3 ? 'Pan Integral' : 'Bagel'}
+                    {product.name}
                   </h3>
                   <p style={{
                     fontSize: 'var(--font-size-body-s)',
@@ -300,7 +332,7 @@ export default function HFLanding({ onNavigate }) {
                     marginBottom: 'var(--space-4)',
                     lineHeight: 1.5
                   }}>
-                    Pan artesanal horneado fresco cada día
+                    {product.description}
                   </p>
                   <div style={{
                     display: 'flex',
@@ -312,10 +344,17 @@ export default function HFLanding({ onNavigate }) {
                       fontWeight: 'var(--font-weight-bold)',
                       color: 'var(--color-primary)'
                     }}>
-                      ${(i * 2 + 3)}.00
+                      ${product.price.toFixed(2)}
                     </span>
                     <button 
-                      onClick={() => onNavigate?.('cart')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onAddToCart) {
+                          onAddToCart(product);
+                        } else {
+                          onNavigate?.('cart');
+                        }
+                      }}
                       style={{
                       padding: 'var(--space-2) var(--space-4)',
                       background: 'var(--color-primary-light)',

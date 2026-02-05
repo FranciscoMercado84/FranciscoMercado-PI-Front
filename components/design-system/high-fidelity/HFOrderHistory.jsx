@@ -1,18 +1,40 @@
 import React from 'react';
-import { Package, Clock, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle, ChevronRight, Truck } from 'lucide-react';
 
-export default function HFOrderHistory({ onNavigate }) {
-  const orders = [
-    { id: 'ORD-285', date: '2026-01-05', status: 'completed', total: 22.15, items: 3 },
-    { id: 'ORD-284', date: '2026-01-03', status: 'completed', total: 15.80, items: 2 },
-    { id: 'ORD-283', date: '2025-12-28', status: 'cancelled', total: 32.50, items: 5 },
-    { id: 'ORD-282', date: '2025-12-22', status: 'completed', total: 18.90, items: 4 },
-    { id: 'ORD-281', date: '2025-12-15', status: 'completed', total: 25.40, items: 3 },
-  ];
+// Pedidos por defecto cuando no se pasan props
+const defaultOrders = [
+  { id: 'ORD-285', date: '2026-01-05', status: 'completed', total: 22.15, items: 3 },
+  { id: 'ORD-284', date: '2026-01-03', status: 'completed', total: 15.80, items: 2 },
+  { id: 'ORD-283', date: '2025-12-28', status: 'cancelled', total: 32.50, items: 5 },
+  { id: 'ORD-282', date: '2025-12-22', status: 'completed', total: 18.90, items: 4 },
+  { id: 'ORD-281', date: '2025-12-15', status: 'completed', total: 25.40, items: 3 },
+];
+
+export default function HFOrderHistory({ onNavigate, orders: propOrders }) {
+  // Normalizar pedidos
+  const normalizeOrder = (order) => ({
+    id: order.id || order._id || order.numero,
+    date: order.date || order.fecha || order.createdAt,
+    status: order.status || order.estado || 'pending',
+    total: order.total || 0,
+    items: order.items?.length || order.productos?.length || order.items || 0
+  });
+
+  const orders = (propOrders && propOrders.length > 0) 
+    ? propOrders.map(normalizeOrder) 
+    : defaultOrders;
+
+  // Calcular estadísticas
+  const totalOrders = orders.length;
+  const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'completado' || o.status === 'entregado').length;
+  const totalSpent = orders.reduce((sum, o) => sum + (o.total || 0), 0);
 
   const getStatusConfig = (status) => {
-    switch (status) {
+    const statusLower = (status || '').toLowerCase();
+    switch (statusLower) {
       case 'completed':
+      case 'completado':
+      case 'entregado':
         return {
           label: 'Completado',
           color: 'var(--color-success)',
@@ -20,6 +42,7 @@ export default function HFOrderHistory({ onNavigate }) {
           icon: CheckCircle
         };
       case 'pending':
+      case 'pendiente':
         return {
           label: 'Pendiente',
           color: 'var(--color-warning)',
@@ -27,15 +50,33 @@ export default function HFOrderHistory({ onNavigate }) {
           icon: Clock
         };
       case 'cancelled':
+      case 'cancelado':
         return {
           label: 'Cancelado',
           color: 'var(--color-error)',
           bg: 'var(--color-error-light)',
           icon: XCircle
         };
+      case 'en_proceso':
+      case 'en proceso':
+      case 'preparando':
+        return {
+          label: 'En Proceso',
+          color: 'var(--color-info)',
+          bg: 'var(--color-info-light)',
+          icon: Package
+        };
+      case 'enviado':
+      case 'en_camino':
+        return {
+          label: 'En Camino',
+          color: 'var(--color-primary)',
+          bg: 'var(--color-primary-light)',
+          icon: Truck
+        };
       default:
         return {
-          label: status,
+          label: status || 'Desconocido',
           color: 'var(--color-neutral-500)',
           bg: 'var(--color-neutral-100)',
           icon: Package
@@ -79,9 +120,9 @@ export default function HFOrderHistory({ onNavigate }) {
           marginBottom: 'var(--space-8)'
         }}>
           {[
-            { label: 'Total de Pedidos', value: '5', icon: '📦' },
-            { label: 'Pedidos Completados', value: '4', icon: '✅' },
-            { label: 'Total Gastado', value: '$82.25', icon: '💰' }
+            { label: 'Total de Pedidos', value: totalOrders.toString(), icon: '📦' },
+            { label: 'Pedidos Completados', value: completedOrders.toString(), icon: '✅' },
+            { label: 'Total Gastado', value: `$${totalSpent.toFixed(2)}`, icon: '💰' }
           ].map((stat, i) => (
             <div key={i} style={{
               background: 'white',
@@ -125,6 +166,7 @@ export default function HFOrderHistory({ onNavigate }) {
             return (
               <div
                 key={order.id}
+                onClick={() => onNavigate?.('order-detail', order.id)}
                 style={{
                   padding: 'var(--space-6)',
                   borderBottom: index < orders.length - 1 ? '1px solid var(--color-neutral-300)' : 'none',

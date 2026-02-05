@@ -71,6 +71,7 @@ export const AppRouter = () => {
           </Route>
 
           {/* Admin Public Routes */}
+          <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
 
           {/* Admin Protected Routes */}
@@ -81,7 +82,6 @@ export const AppRouter = () => {
               </ProtectedRoute>
             }
           >
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/products" element={<AdminProductsPage />} />
             <Route path="/admin/products/new" element={<AdminProductFormPage />} />

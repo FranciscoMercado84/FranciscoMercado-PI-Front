@@ -1,14 +1,44 @@
-import React from 'react';
-import { User, Mail, Phone, CreditCard, Lock, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { User, Mail, Phone, CreditCard, Lock, ArrowRight, Loader } from 'lucide-react';
 
-export default function HFRegister({ onNavigate }) {
+export default function HFRegister({ onNavigate, onRegister, isLoading = false, error = null }) {
+  const [formData, setFormData] = useState({
+    nombre: '',
+    email: '',
+    telefono: '',
+    cedula: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [acceptTerms, setAcceptTerms] = useState(false);
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = () => {
+    if (!acceptTerms) {
+      alert('Debes aceptar los términos y condiciones');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      alert('Las contraseñas no coinciden');
+      return;
+    }
+    if (!formData.nombre || !formData.email || !formData.password) {
+      alert('Por favor, completa todos los campos requeridos');
+      return;
+    }
+    onRegister?.(formData);
+  };
+
   const fields = [
-    { icon: User, label: 'Nombre Completo', type: 'text', placeholder: 'Juan Pérez' },
-    { icon: Mail, label: 'Email', type: 'email', placeholder: 'tu@email.com' },
-    { icon: Phone, label: 'Teléfono', type: 'tel', placeholder: '+506 8888-8888' },
-    { icon: CreditCard, label: 'Cédula', type: 'text', placeholder: '1-0000-0000' },
-    { icon: Lock, label: 'Contraseña', type: 'password', placeholder: '••••••••' },
-    { icon: Lock, label: 'Confirmar Contraseña', type: 'password', placeholder: '••••••••' },
+    { icon: User, label: 'Nombre Completo', type: 'text', placeholder: 'Juan Pérez', field: 'nombre' },
+    { icon: Mail, label: 'Email', type: 'email', placeholder: 'tu@email.com', field: 'email' },
+    { icon: Phone, label: 'Teléfono', type: 'tel', placeholder: '+506 8888-8888', field: 'telefono' },
+    { icon: CreditCard, label: 'Cédula', type: 'text', placeholder: '1-0000-0000', field: 'cedula' },
+    { icon: Lock, label: 'Contraseña', type: 'password', placeholder: '••••••••', field: 'password' },
+    { icon: Lock, label: 'Confirmar Contraseña', type: 'password', placeholder: '••••••••', field: 'confirmPassword' },
   ];
 
   return (
@@ -82,6 +112,9 @@ export default function HFRegister({ onNavigate }) {
               <input
                 type={field.type}
                 placeholder={field.placeholder}
+                value={formData[field.field]}
+                onChange={(e) => handleChange(field.field, e.target.value)}
+                disabled={isLoading}
                 style={{
                   width: '100%',
                   padding: 'var(--space-4)',
@@ -103,6 +136,21 @@ export default function HFRegister({ onNavigate }) {
             </div>
           ))}
 
+          {/* Error Message */}
+          {error && (
+            <div style={{
+              padding: 'var(--space-3) var(--space-4)',
+              background: 'var(--color-error-light)',
+              border: '1px solid var(--color-error)',
+              borderRadius: 'var(--radius-lg)',
+              color: 'var(--color-error-dark)',
+              fontSize: 'var(--font-size-body-s)',
+              textAlign: 'center'
+            }}>
+              {error}
+            </div>
+          )}
+
           {/* Terms */}
           <label style={{
             display: 'flex',
@@ -111,7 +159,12 @@ export default function HFRegister({ onNavigate }) {
             cursor: 'pointer',
             alignItems: 'start'
           }}>
-            <input type="checkbox" style={{ cursor: 'pointer', marginTop: '4px' }} />
+            <input 
+              type="checkbox" 
+              checked={acceptTerms}
+              onChange={(e) => setAcceptTerms(e.target.checked)}
+              style={{ cursor: 'pointer', marginTop: '4px' }} 
+            />
             <span>
               Acepto los{' '}
               <a href="#" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>
@@ -122,16 +175,17 @@ export default function HFRegister({ onNavigate }) {
 
           {/* Submit */}
           <button 
-            onClick={() => onNavigate?.('register')}
+            onClick={handleSubmit}
+            disabled={isLoading}
             style={{
             padding: 'var(--space-4)',
-            background: 'var(--color-primary)',
+            background: isLoading ? 'var(--color-neutral-400)' : 'var(--color-primary)',
             color: 'white',
             border: 'none',
             borderRadius: 'var(--radius-lg)',
             fontSize: 'var(--font-size-h6)',
             fontWeight: 'var(--font-weight-semibold)',
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -140,18 +194,31 @@ export default function HFRegister({ onNavigate }) {
             transition: 'all 0.2s'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--color-primary-hover)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = 'var(--shadow-high)';
+            if (!isLoading) {
+              e.currentTarget.style.background = 'var(--color-primary-hover)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-high)';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--color-primary)';
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+            if (!isLoading) {
+              e.currentTarget.style.background = 'var(--color-primary)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+            }
           }}
           >
-            Crear Cuenta
-            <ArrowRight size={20} />
+            {isLoading ? (
+              <>
+                <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                Creando cuenta...
+              </>
+            ) : (
+              <>
+                Crear Cuenta
+                <ArrowRight size={20} />
+              </>
+            )}
           </button>
 
           {/* Login Link */}

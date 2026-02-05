@@ -2,20 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HFAdminOrders from '../../../components/design-system/high-fidelity/HFAdminOrders';
 import { LoadingState } from '../../components/states/LoadingState';
+import { ErrorState } from '../../components/states/ErrorState';
 import { EmptyState } from '../../components/states/EmptyState';
 import { ClipboardList } from 'lucide-react';
+import { pedidoService } from '../../services/api';
 
 export const AdminOrdersPage = () => {
   const navigate = useNavigate();
+  const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasOrders] = useState(true);
+  const [error, setError] = useState(null);
+
+  const loadOrders = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await pedidoService.getAllPedidos();
+      // La respuesta puede ser un array directamente o estar en response.data
+      const ordersData = Array.isArray(response) ? response : (response.data || response.pedidos || []);
+      setOrders(ordersData);
+    } catch (err) {
+      console.error('Error al cargar pedidos:', err);
+      setError(err.message || 'Error al cargar los pedidos');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
-
-    return () => clearTimeout(timer);
+    loadOrders();
   }, []);
 
   const handleNavigate = (screenId, orderId) => {
@@ -37,7 +52,17 @@ export const AdminOrdersPage = () => {
     return <LoadingState message="Cargando pedidos..." />;
   }
 
-  if (!hasOrders) {
+  if (error) {
+    return (
+      <ErrorState
+        title="Error al cargar pedidos"
+        message={error}
+        onRetry={loadOrders}
+      />
+    );
+  }
+
+  if (orders.length === 0) {
     return (
       <EmptyState
         title="No hay pedidos"
@@ -47,6 +72,6 @@ export const AdminOrdersPage = () => {
     );
   }
 
-  return <HFAdminOrders onNavigate={handleNavigate} />;
+  return <HFAdminOrders orders={orders} onNavigate={handleNavigate} />;
 };
 

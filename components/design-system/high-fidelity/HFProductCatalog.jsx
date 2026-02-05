@@ -2,19 +2,67 @@ import React, { useState } from 'react';
 import HFFooter from './HFFooter';
 import { Search, SlidersHorizontal, Grid, List } from 'lucide-react';
 
-export default function HFProductCatalog({ onNavigate }) {
-  const [viewMode, setViewMode] = useState('grid');
+// Productos de ejemplo para cuando no se pasen props
+const defaultProducts = [
+  { id: 1, name: 'Baguette Francesa', price: 3.50, category: 'Pan', emoji: '🥖', badge: 'Popular' },
+  { id: 2, name: 'Croissant Mantequilla', price: 2.80, category: 'Pastelería', emoji: '🥐', badge: 'Nuevo' },
+  { id: 3, name: 'Pan Integral', price: 4.20, category: 'Pan', emoji: '🍞', badge: null },
+  { id: 4, name: 'Bagel', price: 3.00, category: 'Pan', emoji: '🥯', badge: null },
+  { id: 5, name: 'Pan de Ajo', price: 4.50, category: 'Especiales', emoji: '🧄', badge: 'Popular' },
+  { id: 6, name: 'Donut', price: 2.50, category: 'Pastelería', emoji: '🍩', badge: null },
+  { id: 7, name: 'Pretzel', price: 3.20, category: 'Pan', emoji: '🥨', badge: null },
+  { id: 8, name: 'Pan Dulce', price: 2.90, category: 'Pastelería', emoji: '🧁', badge: 'Nuevo' },
+];
 
-  const products = [
-    { id: 1, name: 'Baguette Francesa', price: 3.50, category: 'Pan', emoji: '🥖', badge: 'Popular' },
-    { id: 2, name: 'Croissant Mantequilla', price: 2.80, category: 'Pastelería', emoji: '🥐', badge: 'Nuevo' },
-    { id: 3, name: 'Pan Integral', price: 4.20, category: 'Pan', emoji: '🍞', badge: null },
-    { id: 4, name: 'Bagel', price: 3.00, category: 'Pan', emoji: '🥯', badge: null },
-    { id: 5, name: 'Pan de Ajo', price: 4.50, category: 'Especiales', emoji: '🧄', badge: 'Popular' },
-    { id: 6, name: 'Donut', price: 2.50, category: 'Pastelería', emoji: '🍩', badge: null },
-    { id: 7, name: 'Pretzel', price: 3.20, category: 'Pan', emoji: '🥨', badge: null },
-    { id: 8, name: 'Pan Dulce', price: 2.90, category: 'Pastelería', emoji: '🧁', badge: 'Nuevo' },
-  ];
+// Mapa de emojis por categoría para productos sin imagen
+const categoryEmojis = {
+  'Pan': '🍞',
+  'Panadería': '🥖',
+  'Pastelería': '🥐',
+  'Especiales': '🧄',
+  'Bebidas': '☕',
+  'Postres': '🍰',
+  'default': '🥯'
+};
+
+export default function HFProductCatalog({ onNavigate, products: propProducts, onAddToCart }) {
+  const [viewMode, setViewMode] = useState('grid');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+
+  // Usar productos de props o los por defecto
+  const products = propProducts && propProducts.length > 0 ? propProducts : defaultProducts;
+
+  // Obtener categorías únicas de los productos
+  const categories = [...new Set(products.map(p => p.category || p.categoria))].filter(Boolean);
+
+  // Filtrar productos
+  const filteredProducts = products.filter(product => {
+    const name = product.name || product.nombre || '';
+    const category = product.category || product.categoria || '';
+    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = !selectedCategory || category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  // Helper para obtener el emoji del producto
+  const getProductEmoji = (product) => {
+    if (product.emoji) return product.emoji;
+    const category = product.category || product.categoria || 'default';
+    return categoryEmojis[category] || categoryEmojis.default;
+  };
+
+  // Helper para obtener propiedades del producto (normalizar estructura)
+  const getProductProps = (product) => ({
+    id: product.id || product._id,
+    name: product.name || product.nombre,
+    price: product.price || product.precio,
+    category: product.category || product.categoria,
+    description: product.description || product.descripcion,
+    image: product.image || product.imagen_url || product.imagen,
+    emoji: getProductEmoji(product),
+    badge: product.badge || product.etiqueta,
+  });
 
   return (
     <div style={{
@@ -76,6 +124,8 @@ export default function HFProductCatalog({ onNavigate }) {
             <input
               type="text"
               placeholder="Buscar productos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 width: '100%',
                 padding: 'var(--space-3) var(--space-3) var(--space-3) var(--space-10)',
@@ -98,20 +148,24 @@ export default function HFProductCatalog({ onNavigate }) {
           </div>
 
           {/* Category Filter */}
-          <select style={{
-            padding: 'var(--space-3) var(--space-4)',
-            border: '1px solid var(--color-neutral-300)',
-            borderRadius: 'var(--radius-lg)',
-            fontSize: 'var(--font-size-body-m)',
-            background: 'white',
-            cursor: 'pointer',
-            fontWeight: 'var(--font-weight-medium)',
-            color: 'var(--color-neutral-900)'
-          }}>
-            <option>Todas las Categorías</option>
-            <option>Pan</option>
-            <option>Pastelería</option>
-            <option>Especiales</option>
+          <select 
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            style={{
+              padding: 'var(--space-3) var(--space-4)',
+              border: '1px solid var(--color-neutral-300)',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: 'var(--font-size-body-m)',
+              background: 'white',
+              cursor: 'pointer',
+              fontWeight: 'var(--font-weight-medium)',
+              color: 'var(--color-neutral-900)'
+            }}
+          >
+            <option value="">Todas las Categorías</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
           </select>
 
           {/* Filter Button */}
@@ -177,128 +231,152 @@ export default function HFProductCatalog({ onNavigate }) {
             : '1fr',
           gap: 'var(--space-5)'
         }}>
-          {products.map(product => (
-            <div
-              key={product.id}
-              onClick={() => onNavigate?.('product-detail')}
-              style={{
-                background: 'white',
-                borderRadius: 'var(--radius-xl)',
-                overflow: 'hidden',
-                border: '1px solid var(--color-neutral-300)',
-                transition: 'all 0.3s',
-                cursor: 'pointer',
-                display: viewMode === 'list' ? 'flex' : 'block'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <div style={{
-                aspectRatio: viewMode === 'grid' ? '4/3' : '1/1',
-                width: viewMode === 'list' ? '200px' : '100%',
-                background: 'var(--color-neutral-200)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '64px',
-                position: 'relative',
-                flexShrink: 0
-              }}>
-                {product.emoji}
-                {product.badge && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 'var(--space-3)',
-                    right: 'var(--space-3)',
-                    padding: 'var(--space-1) var(--space-3)',
-                    background: product.badge === 'Nuevo' ? 'var(--color-new)' : 'var(--color-primary)',
-                    color: 'white',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: 'var(--font-size-badge)',
-                    fontWeight: 'var(--font-weight-bold)'
-                  }}>
-                    {product.badge}
-                  </div>
-                )}
-              </div>
-              <div style={{ 
-                padding: 'var(--space-5)',
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between'
-              }}>
-                <div>
-                  <div style={{
-                    fontSize: 'var(--font-size-caption)',
-                    color: 'var(--color-primary)',
-                    fontWeight: 'var(--font-weight-semibold)',
-                    marginBottom: 'var(--space-1)'
-                  }}>
-                    {product.category}
-                  </div>
-                  <h3 style={{
-                    fontSize: 'var(--font-size-h6)',
-                    fontWeight: 'var(--font-weight-semibold)',
-                    color: 'var(--color-neutral-900)',
-                    marginBottom: 'var(--space-2)'
-                  }}>
-                    {product.name}
-                  </h3>
-                  <p style={{
-                    fontSize: 'var(--font-size-body-s)',
-                    color: 'var(--color-neutral-700)',
-                    marginBottom: 'var(--space-4)',
-                    lineHeight: 1.5
-                  }}>
-                    Pan artesanal horneado fresco cada día
-                  </p>
-                </div>
+          {filteredProducts.map(product => {
+            const p = getProductProps(product);
+            return (
+              <div
+                key={p.id}
+                onClick={() => onNavigate?.('product-detail', p.id)}
+                style={{
+                  background: 'white',
+                  borderRadius: 'var(--radius-xl)',
+                  overflow: 'hidden',
+                  border: '1px solid var(--color-neutral-300)',
+                  transition: 'all 0.3s',
+                  cursor: 'pointer',
+                  display: viewMode === 'list' ? 'flex' : 'block'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
                 <div style={{
+                  aspectRatio: viewMode === 'grid' ? '4/3' : '1/1',
+                  width: viewMode === 'list' ? '200px' : '100%',
+                  background: 'var(--color-neutral-200)',
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '64px',
+                  position: 'relative',
+                  flexShrink: 0,
+                  overflow: 'hidden'
                 }}>
-                  <span style={{
-                    fontSize: 'var(--font-size-h5)',
-                    fontWeight: 'var(--font-weight-bold)',
-                    color: 'var(--color-primary)'
+                  {p.image ? (
+                    <img 
+                      src={p.image} 
+                      alt={p.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <span style={{ display: p.image ? 'none' : 'flex' }}>{p.emoji}</span>
+                  {p.badge && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 'var(--space-3)',
+                      right: 'var(--space-3)',
+                      padding: 'var(--space-1) var(--space-3)',
+                      background: p.badge === 'Nuevo' ? 'var(--color-new)' : 'var(--color-primary)',
+                      color: 'white',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: 'var(--font-size-badge)',
+                      fontWeight: 'var(--font-weight-bold)'
+                    }}>
+                      {p.badge}
+                    </div>
+                  )}
+                </div>
+                <div style={{ 
+                  padding: 'var(--space-5)',
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <div style={{
+                      fontSize: 'var(--font-size-caption)',
+                      color: 'var(--color-primary)',
+                      fontWeight: 'var(--font-weight-semibold)',
+                      marginBottom: 'var(--space-1)'
+                    }}>
+                      {p.category}
+                    </div>
+                    <h3 style={{
+                      fontSize: 'var(--font-size-h6)',
+                      fontWeight: 'var(--font-weight-semibold)',
+                      color: 'var(--color-neutral-900)',
+                      marginBottom: 'var(--space-2)'
+                    }}>
+                      {p.name}
+                    </h3>
+                    <p style={{
+                      fontSize: 'var(--font-size-body-s)',
+                      color: 'var(--color-neutral-700)',
+                      marginBottom: 'var(--space-4)',
+                      lineHeight: 1.5
+                    }}>
+                      {p.description || 'Producto artesanal de alta calidad'}
+                    </p>
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
                   }}>
-                    ${product.price.toFixed(2)}
-                  </span>
-                  <button style={{
-                    padding: 'var(--space-2) var(--space-4)',
-                    background: 'var(--color-primary)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 'var(--radius-lg)',
-                    fontSize: 'var(--font-size-body-s)',
-                    fontWeight: 'var(--font-weight-semibold)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    boxShadow: 'var(--shadow-sm)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--color-primary-hover)';
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'var(--color-primary)';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }}
-                  >
-                    Agregar
-                  </button>
+                    <span style={{
+                      fontSize: 'var(--font-size-h5)',
+                      fontWeight: 'var(--font-weight-bold)',
+                      color: 'var(--color-primary)'
+                    }}>
+                      ${(p.price || 0).toFixed(2)}
+                    </span>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddToCart?.(p.id);
+                      }}
+                      style={{
+                        padding: 'var(--space-2) var(--space-4)',
+                        background: 'var(--color-primary)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 'var(--radius-lg)',
+                        fontSize: 'var(--font-size-body-s)',
+                        fontWeight: 'var(--font-weight-semibold)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--color-primary-hover)';
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'var(--color-primary)';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                    >
+                      Agregar
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

@@ -2,11 +2,62 @@ import React, { useState } from 'react';
 import HFFooter from './HFFooter';
 import { Star, Heart, Minus, Plus, ShoppingCart, Info } from 'lucide-react';
 
-export default function HFProductDetail({ onNavigate }) {
+// Producto por defecto cuando no se pasa prop
+const defaultProduct = {
+  id: 1,
+  name: 'Baguette Francesa',
+  price: 3.50,
+  category: 'Pan',
+  description: 'Auténtica baguette francesa con corteza crujiente y miga suave. Horneada diariamente con masa madre y harina de alta calidad. Perfecta para acompañar cualquier comida.',
+  ingredients: 'Harina de trigo, agua, sal, levadura natural',
+  emoji: '🥖',
+  available: true,
+  rating: 4.5,
+  reviews: 128
+};
+
+// Mapa de emojis por categoría
+const categoryEmojis = {
+  'Pan': '🍞',
+  'Panadería': '🥖',
+  'Pastelería': '🥐',
+  'Especiales': '🧄',
+  'Bebidas': '☕',
+  'Postres': '🍰',
+  'default': '🥯'
+};
+
+export default function HFProductDetail({ onNavigate, product: propProduct, onAddToCart }) {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
 
-  const images = ['🥖', '🥖', '🥖', '🥖'];
+  // Normalizar el producto
+  const rawProduct = propProduct || defaultProduct;
+  const product = {
+    id: rawProduct.id || rawProduct._id,
+    name: rawProduct.name || rawProduct.nombre,
+    price: rawProduct.price || rawProduct.precio || 0,
+    category: rawProduct.category || rawProduct.categoria,
+    description: rawProduct.description || rawProduct.descripcion || 'Producto artesanal de alta calidad.',
+    ingredients: rawProduct.ingredients || rawProduct.ingredientes,
+    image: rawProduct.image || rawProduct.imagen_url || rawProduct.imagen,
+    emoji: rawProduct.emoji || categoryEmojis[rawProduct.category || rawProduct.categoria] || categoryEmojis.default,
+    available: rawProduct.available !== undefined ? rawProduct.available : (rawProduct.disponible !== undefined ? rawProduct.disponible : true),
+    rating: rawProduct.rating || rawProduct.calificacion || 4.5,
+    reviews: rawProduct.reviews || rawProduct.resenas || 0,
+    stock: rawProduct.stock || 100
+  };
+
+  const images = product.image ? [product.image] : [product.emoji, product.emoji, product.emoji, product.emoji];
+  const hasRealImage = !!product.image;
+
+  const handleAddToCart = () => {
+    if (onAddToCart) {
+      onAddToCart(product.id, quantity);
+    } else {
+      onNavigate?.('cart');
+    }
+  };
 
   return (
     <div style={{
@@ -27,12 +78,12 @@ export default function HFProductDetail({ onNavigate }) {
           fontSize: 'var(--font-size-body-s)',
           color: 'var(--color-neutral-500)'
         }}>
-          <span>Inicio</span>
+          <span style={{ cursor: 'pointer' }} onClick={() => onNavigate?.('catalog')}>Inicio</span>
           <span>/</span>
-          <span>Productos</span>
+          <span style={{ cursor: 'pointer' }} onClick={() => onNavigate?.('catalog')}>Productos</span>
           <span>/</span>
           <span style={{ color: 'var(--color-neutral-900)', fontWeight: 'var(--font-weight-medium)' }}>
-            Baguette Francesa
+            {product.name}
           </span>
         </div>
 
@@ -54,10 +105,23 @@ export default function HFProductDetail({ onNavigate }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '180px',
-              position: 'relative'
+              fontSize: hasRealImage ? 'inherit' : '180px',
+              position: 'relative',
+              overflow: 'hidden'
             }}>
-              {images[selectedImage]}
+              {hasRealImage ? (
+                <img 
+                  src={images[selectedImage]} 
+                  alt={product.name}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain'
+                  }}
+                />
+              ) : (
+                images[selectedImage]
+              )}
               <button style={{
                 position: 'absolute',
                 top: 'var(--space-5)',
@@ -136,14 +200,14 @@ export default function HFProductDetail({ onNavigate }) {
             <div style={{
               display: 'inline-block',
               padding: 'var(--space-1) var(--space-3)',
-              background: 'var(--color-available)',
+              background: product.available ? 'var(--color-available)' : 'var(--color-error)',
               color: 'white',
               borderRadius: 'var(--radius-full)',
               fontSize: 'var(--font-size-badge)',
               fontWeight: 'var(--font-weight-bold)',
               marginBottom: 'var(--space-4)'
             }}>
-              ✓ Disponible
+              {product.available ? '✓ Disponible' : '✗ No disponible'}
             </div>
 
             <h1 style={{
@@ -153,7 +217,7 @@ export default function HFProductDetail({ onNavigate }) {
               color: 'var(--color-neutral-900)',
               marginBottom: 'var(--space-3)'
             }}>
-              Baguette Francesa
+              {product.name}
             </h1>
 
             {/* Rating */}
@@ -177,7 +241,7 @@ export default function HFProductDetail({ onNavigate }) {
                 fontSize: 'var(--font-size-body-s)',
                 color: 'var(--color-neutral-700)'
               }}>
-                4.5 (128 reseñas)
+                {product.rating} ({product.reviews} reseñas)
               </span>
             </div>
 
@@ -193,7 +257,7 @@ export default function HFProductDetail({ onNavigate }) {
                 fontWeight: 'var(--font-weight-bold)',
                 color: 'var(--color-primary)'
               }}>
-                $3.50
+                ${product.price.toFixed(2)}
               </div>
               <div style={{
                 fontSize: 'var(--font-size-body-s)',
@@ -220,28 +284,28 @@ export default function HFProductDetail({ onNavigate }) {
                 lineHeight: 1.6,
                 marginBottom: 'var(--space-4)'
               }}>
-                Auténtica baguette francesa con corteza crujiente y miga suave. 
-                Horneada diariamente con masa madre y harina de alta calidad. 
-                Perfecta para acompañar cualquier comida.
+                {product.description}
               </p>
-              <div style={{
-                background: 'var(--color-info-light)',
-                padding: 'var(--space-4)',
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid var(--color-info)',
-                display: 'flex',
-                gap: 'var(--space-3)',
-                alignItems: 'start'
-              }}>
-                <Info size={20} style={{ color: 'var(--color-info-dark)', flexShrink: 0, marginTop: '2px' }} />
+              {product.ingredients && (
                 <div style={{
-                  fontSize: 'var(--font-size-body-s)',
-                  color: 'var(--color-neutral-900)',
-                  lineHeight: 1.5
+                  background: 'var(--color-info-light)',
+                  padding: 'var(--space-4)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--color-info)',
+                  display: 'flex',
+                  gap: 'var(--space-3)',
+                  alignItems: 'start'
                 }}>
-                  <strong>Ingredientes:</strong> Harina de trigo, agua, sal, levadura natural
+                  <Info size={20} style={{ color: 'var(--color-info-dark)', flexShrink: 0, marginTop: '2px' }} />
+                  <div style={{
+                    fontSize: 'var(--font-size-body-s)',
+                    color: 'var(--color-neutral-900)',
+                    lineHeight: 1.5
+                  }}>
+                    <strong>Ingredientes:</strong> {product.ingredients}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Quantity Selector */}
@@ -308,37 +372,42 @@ export default function HFProductDetail({ onNavigate }) {
 
             {/* Add to Cart Button */}
             <button 
-            onClick={() => onNavigate?.('cart')}
+            onClick={handleAddToCart}
+            disabled={!product.available}
             style={{
               width: '100%',
               padding: 'var(--space-4)',
-              background: 'var(--color-primary)',
+              background: product.available ? 'var(--color-primary)' : 'var(--color-neutral-400)',
               color: 'white',
               border: 'none',
               borderRadius: 'var(--radius-lg)',
               fontSize: 'var(--font-size-h6)',
               fontWeight: 'var(--font-weight-semibold)',
-              cursor: 'pointer',
+              cursor: product.available ? 'pointer' : 'not-allowed',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 'var(--space-3)',
-              boxShadow: 'var(--shadow-medium)',
+              boxShadow: product.available ? 'var(--shadow-medium)' : 'none',
               transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--color-primary-hover)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-high)';
+              if (product.available) {
+                e.currentTarget.style.background = 'var(--color-primary-hover)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-high)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--color-primary)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+              if (product.available) {
+                e.currentTarget.style.background = 'var(--color-primary)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+              }
             }}
             >
               <ShoppingCart size={24} />
-              Agregar al Carrito - ${(3.50 * quantity).toFixed(2)}
+              Agregar al Carrito - ${(product.price * quantity).toFixed(2)}
             </button>
           </div>
         </div>

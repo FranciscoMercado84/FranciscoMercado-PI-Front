@@ -1,18 +1,48 @@
 import React from 'react';
 import { BarChart, TrendingUp, Package, DollarSign, Users, Clock } from 'lucide-react';
 
-export default function HFAdminDashboard({ onNavigate }) {
-  const stats = [
-    { label: 'Ventas Hoy', value: '$285.50', change: '+12%', icon: DollarSign, color: 'var(--color-success)' },
-    { label: 'Pedidos Pendientes', value: '8', change: '+3', icon: Package, color: 'var(--color-warning)' },
-    { label: 'Clientes Activos', value: '42', change: '+5', icon: Users, color: 'var(--color-info)' },
-    { label: 'Productos', value: '24', change: '0', icon: TrendingUp, color: 'var(--color-primary)', onClick: () => onNavigate?.('product-list') }
-  ];
+// Datos por defecto
+const defaultStats = {
+  salesToday: 285.50,
+  pendingOrders: 8,
+  activeCustomers: 42,
+  totalProducts: 24
+};
 
-  const recentOrders = [
-    { id: 'ORD-285', customer: 'Juan Pérez', total: 22.15, status: 'pending', time: '10:30 AM' },
-    { id: 'ORD-284', customer: 'María García', total: 15.80, status: 'completed', time: '09:45 AM' },
-    { id: 'ORD-283', customer: 'Carlos López', total: 32.50, status: 'pending', time: '09:15 AM' }
+const defaultRecentOrders = [
+  { id: 'ORD-285', customer: 'Juan Pérez', total: 22.15, status: 'pending', time: '10:30 AM' },
+  { id: 'ORD-284', customer: 'María García', total: 15.80, status: 'completed', time: '09:45 AM' },
+  { id: 'ORD-283', customer: 'Carlos López', total: 32.50, status: 'pending', time: '09:15 AM' }
+];
+
+export default function HFAdminDashboard({ stats: propStats, recentOrders: propRecentOrders, onNavigate }) {
+  // Usar props si existen, sino usar defaults
+  const statsData = propStats || defaultStats;
+
+  // Normalizar pedidos recientes
+  const normalizeOrder = (o) => {
+    let time = o.time;
+    if (!time && (o.createdAt || o.fechaCreacion)) {
+      const d = new Date(o.createdAt || o.fechaCreacion);
+      time = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    return {
+      id: o.id || o._id || o.orderId,
+      customer: o.customer || o.cliente || o.usuario?.nombre || 'Cliente',
+      total: o.total || 0,
+      status: o.status || o.estado || 'pending',
+      time: time || 'N/A'
+    };
+  };
+
+  const recentOrders = (propRecentOrders || defaultRecentOrders).map(normalizeOrder);
+
+  const stats = [
+    { label: 'Ventas Hoy', value: `$${statsData.salesToday.toFixed(2)}`, change: '+12%', icon: DollarSign, color: 'var(--color-success)' },
+    { label: 'Pedidos Pendientes', value: String(statsData.pendingOrders), change: `+${statsData.pendingOrders}`, icon: Package, color: 'var(--color-warning)' },
+    { label: 'Clientes Activos', value: String(statsData.activeCustomers), change: '+5', icon: Users, color: 'var(--color-info)' },
+    { label: 'Productos', value: String(statsData.totalProducts), change: '0', icon: TrendingUp, color: 'var(--color-primary)', onClick: () => onNavigate?.('products') }
   ];
 
   return (

@@ -1,19 +1,84 @@
-import React from 'react';
-import { Search, Filter, Eye, CheckCircle, Clock, XCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Filter, Eye, CheckCircle, Clock, XCircle, Loader } from 'lucide-react';
 
-export default function HFAdminOrders({ onNavigate }) {
-  const orders = [
-    { id: 'ORD-285', customer: 'Juan Pérez', date: '2026-01-05 10:30', items: 3, total: 22.15, status: 'pending' },
-    { id: 'ORD-284', customer: 'María García', date: '2026-01-05 09:45', items: 2, total: 15.80, status: 'completed' },
-    { id: 'ORD-283', customer: 'Carlos López', date: '2026-01-05 09:15', items: 5, total: 32.50, status: 'cancelled' },
-    { id: 'ORD-282', customer: 'Ana Rodríguez', date: '2026-01-04 16:20', items: 4, total: 18.90, status: 'completed' },
-  ];
+// Datos mock por defecto
+const defaultOrders = [
+  { id: 'ORD-285', customer: 'Juan Pérez', date: '2026-01-05 10:30', items: 3, total: 22.15, status: 'pending' },
+  { id: 'ORD-284', customer: 'María García', date: '2026-01-05 09:45', items: 2, total: 15.80, status: 'completed' },
+  { id: 'ORD-283', customer: 'Carlos López', date: '2026-01-05 09:15', items: 5, total: 32.50, status: 'cancelled' },
+  { id: 'ORD-282', customer: 'Ana Rodríguez', date: '2026-01-04 16:20', items: 4, total: 18.90, status: 'completed' },
+];
+
+export default function HFAdminOrders({ orders: propOrders, onNavigate }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  // Normalizar pedidos del backend
+  const normalizeOrder = (o) => {
+    // Formatear fecha
+    let dateFormatted = o.date || o.fecha;
+    if (o.createdAt || o.fechaCreacion) {
+      const d = new Date(o.createdAt || o.fechaCreacion);
+      dateFormatted = d.toLocaleString('es-ES', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Calcular items
+    const items = o.items || o.productos || [];
+    const itemCount = o.itemCount || items.reduce((sum, item) => sum + (item.qty || item.quantity || item.cantidad || 1), 0);
+
+    return {
+      id: o.id || o._id || o.orderId,
+      customer: o.customer || o.cliente || o.usuario?.nombre || 'Cliente',
+      date: dateFormatted || 'Fecha no disponible',
+      items: itemCount,
+      total: o.total || 0,
+      status: o.status || o.estado || 'pending'
+    };
+  };
+
+  const rawOrders = propOrders || defaultOrders;
+  const orders = rawOrders.map(normalizeOrder);
+
+  // Filtrar pedidos
+  const filteredOrders = orders.filter(o => {
+    const matchesSearch = 
+      String(o.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.customer.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || o.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Estadísticas dinámicas
+  const today = new Date().toDateString();
+  const ordersToday = orders.filter(o => {
+    try {
+      const orderDate = new Date(o.date);
+      return orderDate.toDateString() === today;
+    } catch {
+      return false;
+    }
+  }).length || orders.length; // Fallback to all orders if date parsing fails
+
+  const pendingOrders = orders.filter(o => o.status === 'pending' || o.status === 'pendiente').length;
+  const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'completado' || o.status === 'entregado').length;
 
   const getStatusConfig = (status) => {
     const configs = {
       pending: { label: 'Pendiente', color: 'var(--color-warning)', bg: 'var(--color-warning-light)', icon: Clock },
+      pendiente: { label: 'Pendiente', color: 'var(--color-warning)', bg: 'var(--color-warning-light)', icon: Clock },
+      processing: { label: 'En Proceso', color: 'var(--color-info, #0ea5e9)', bg: 'var(--color-info-light, #e0f2fe)', icon: Loader },
+      en_proceso: { label: 'En Proceso', color: 'var(--color-info, #0ea5e9)', bg: 'var(--color-info-light, #e0f2fe)', icon: Loader },
       completed: { label: 'Completado', color: 'var(--color-success)', bg: 'var(--color-success-light)', icon: CheckCircle },
-      cancelled: { label: 'Cancelado', color: 'var(--color-error)', bg: 'var(--color-error-light)', icon: XCircle }
+      completado: { label: 'Completado', color: 'var(--color-success)', bg: 'var(--color-success-light)', icon: CheckCircle },
+      entregado: { label: 'Entregado', color: 'var(--color-success)', bg: 'var(--color-success-light)', icon: CheckCircle },
+      cancelled: { label: 'Cancelado', color: 'var(--color-error)', bg: 'var(--color-error-light)', icon: XCircle },
+      cancelado: { label: 'Cancelado', color: 'var(--color-error)', bg: 'var(--color-error-light)', icon: XCircle }
     };
     return configs[status] || configs.pending;
   };
@@ -50,9 +115,9 @@ export default function HFAdminOrders({ onNavigate }) {
         marginBottom: 'var(--space-6)'
       }}>
         {[
-          { label: 'Pedidos Hoy', value: '12', color: 'var(--color-info)' },
-          { label: 'Pendientes', value: '5', color: 'var(--color-warning)' },
-          { label: 'Completados', value: '7', color: 'var(--color-success)' }
+          { label: 'Pedidos Hoy', value: String(ordersToday), color: 'var(--color-info)' },
+          { label: 'Pendientes', value: String(pendingOrders), color: 'var(--color-warning)' },
+          { label: 'Completados', value: String(completedOrders), color: 'var(--color-success)' }
         ].map((stat, i) => (
           <div key={i} style={{
             background: 'white',
@@ -97,6 +162,8 @@ export default function HFAdminOrders({ onNavigate }) {
           <input
             type="text"
             placeholder="Buscar por ID o cliente..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             style={{
               width: '100%',
               padding: 'var(--space-3) var(--space-3) var(--space-3) var(--space-10)',
@@ -107,7 +174,10 @@ export default function HFAdminOrders({ onNavigate }) {
             }}
           />
         </div>
-        <button style={{
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          style={{
           padding: 'var(--space-3) var(--space-5)',
           background: 'var(--color-secondary)',
           color: 'white',
@@ -115,14 +185,13 @@ export default function HFAdminOrders({ onNavigate }) {
           borderRadius: 'var(--radius-lg)',
           fontSize: 'var(--font-size-body-m)',
           fontWeight: 'var(--font-weight-semibold)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-2)'
+          cursor: 'pointer'
         }}>
-          <Filter size={18} />
-          Filtros
-        </button>
+          <option value="all">Todos</option>
+          <option value="pending">Pendientes</option>
+          <option value="completed">Completados</option>
+          <option value="cancelled">Cancelados</option>
+        </select>
       </div>
 
       {/* Orders Table */}
@@ -152,7 +221,7 @@ export default function HFAdminOrders({ onNavigate }) {
           <div>Acción</div>
         </div>
 
-        {orders.map((order, i) => {
+        {filteredOrders.map((order, i) => {
           const statusConfig = getStatusConfig(order.status);
           const StatusIcon = statusConfig.icon;
 
@@ -161,7 +230,7 @@ export default function HFAdminOrders({ onNavigate }) {
               display: 'grid',
               gridTemplateColumns: '120px 1fr 1fr 100px 100px 120px 100px',
               padding: 'var(--space-5) var(--space-6)',
-              borderBottom: i < orders.length - 1 ? '1px solid var(--color-neutral-300)' : 'none',
+              borderBottom: i < filteredOrders.length - 1 ? '1px solid var(--color-neutral-300)' : 'none',
               alignItems: 'center',
               transition: 'background 0.2s'
             }}
