@@ -26,7 +26,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
     name: p.name || p.nombre || 'Producto',
     description: p.description || p.descripcion || 'Pan artesanal horneado fresco cada día',
     price: p.price || p.precio || 0,
-    image: p.image || p.imagen,
+    image: p.image || p.imagen || p.imagen_url,
     emoji: categoryEmojis[p.category || p.categoria] || categoryEmojis.default,
     category: p.category || p.categoria
   });

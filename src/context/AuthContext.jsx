@@ -12,14 +12,21 @@ export const AuthProvider = ({ children }) => {
       // Llamada real a la API del backend
       const response = await authService.login(email, password);
       
+      console.log('🔍 [AuthContext] Respuesta completa del backend:', response);
+      console.log('🔍 [AuthContext] response.data:', response.data);
+      console.log('🔍 [AuthContext] response.data.user:', response.data?.user);
+      
       // Mapear la respuesta del backend a la estructura esperada
       const userData = {
         id: response.data.user.id || response.data.user._id,
         email: response.data.user.email,
-        role: response.data.user.rol, // Mapear 'rol' del backend a 'role'
+        role: response.data.user.rol || response.data.user.role, // Mapear 'rol' del backend a 'role'
         name: response.data.user.nombre || response.data.user.name,
         token: response.data.access_token, // Guardar el token JWT
       };
+      
+      console.log('✅ [AuthContext] Usuario mapeado:', userData);
+      console.log('✅ [AuthContext] isAdmin será:', userData.role === 'admin');
       
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
@@ -39,12 +46,19 @@ export const AuthProvider = ({ children }) => {
   // Restaurar sesión del localStorage al montar
   React.useEffect(() => {
     const storedUser = localStorage.getItem('user');
+    console.log('🔄 [AuthContext] Restaurando sesión del localStorage:', storedUser);
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        console.log('✅ [AuthContext] Usuario restaurado:', parsedUser);
+        console.log('✅ [AuthContext] isAdmin será:', parsedUser.role === 'admin');
+        setUser(parsedUser);
       } catch (error) {
+        console.error('❌ [AuthContext] Error al parsear usuario del localStorage:', error);
         localStorage.removeItem('user');
       }
+    } else {
+      console.log('ℹ️ [AuthContext] No hay usuario en localStorage');
     }
     setIsLoading(false);
   }, []);

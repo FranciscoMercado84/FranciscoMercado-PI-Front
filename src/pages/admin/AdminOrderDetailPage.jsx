@@ -49,6 +49,17 @@ export const AdminOrderDetailPage = () => {
     }
   };
 
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await pedidoService.updateEstado(orderId, newStatus);
+      // Actualizar el estado local
+      setOrder(prev => ({ ...prev, estado: newStatus, status: newStatus }));
+    } catch (err) {
+      console.error('Error al actualizar estado:', err);
+      alert(err.message || 'Error al actualizar el estado del pedido');
+    }
+  };
+
   if (isLoading) {
     return <LoadingState message="Cargando detalles del pedido..." />;
   }
@@ -63,6 +74,13 @@ export const AdminOrderDetailPage = () => {
     );
   }
 
-  return <HFOrderDetail order={order} onNavigate={handleNavigate} isAdmin={true} />;
+  return (
+    <HFOrderDetail 
+      order={order} 
+      onNavigate={handleNavigate} 
+      isAdmin={true} 
+      onStatusChange={handleStatusChange}
+    />
+  );
 };
 

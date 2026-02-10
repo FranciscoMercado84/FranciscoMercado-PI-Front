@@ -13,6 +13,7 @@ export const CatalogPage = () => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     loadProducts();
@@ -34,6 +35,11 @@ export const CatalogPage = () => {
     }
   };
 
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const handleAddToCart = async (productId) => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -42,11 +48,13 @@ export const CatalogPage = () => {
     
     try {
       await carritoService.addItem(productId, 1);
-      // TODO: Mostrar notificación de éxito
-      alert('Producto agregado al carrito');
+      // Buscar nombre del producto para el toast
+      const product = products.find(p => (p.id || p._id) === productId);
+      const productName = product?.nombre || product?.name || 'Producto';
+      showToast(`${productName} añadido al carrito`, 'success');
     } catch (err) {
       console.error('Error al agregar al carrito:', err);
-      alert(err.message || 'Error al agregar el producto');
+      showToast(err.message || 'Error al agregar el producto', 'error');
     }
   };
 
@@ -91,11 +99,34 @@ export const CatalogPage = () => {
   }
 
   return (
-    <HFProductCatalog 
-      products={products}
-      onNavigate={handleNavigate}
-      onAddToCart={handleAddToCart}
-    />
+    <>
+      {/* Toast notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          right: '20px',
+          zIndex: 1000,
+          padding: '12px 20px',
+          background: toast.type === 'success' ? 'var(--color-success, #22c55e)' : 'var(--color-error, #ef4444)',
+          color: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: '500'
+        }}>
+          <span style={{ fontSize: '18px' }}>{toast.type === 'success' ? '✓' : '✕'}</span>
+          {toast.message}
+        </div>
+      )}
+      <HFProductCatalog 
+        products={products}
+        onNavigate={handleNavigate}
+        onAddToCart={handleAddToCart}
+      />
+    </>
   );
 };
 

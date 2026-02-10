@@ -10,6 +10,25 @@ export const LandingPage = () => {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [cartCount, setCartCount] = useState(0);
+  const [toast, setToast] = useState(null);
+
+  // Cargar carrito para obtener el conteo
+  useEffect(() => {
+    const loadCartCount = async () => {
+      if (isAuthenticated) {
+        try {
+          const cart = await carritoService.get();
+          const items = cart.items || cart.productos || [];
+          const count = items.reduce((sum, item) => sum + (item.cantidad || item.quantity || 1), 0);
+          setCartCount(count);
+        } catch (err) {
+          console.error('Error al cargar carrito:', err);
+        }
+      }
+    };
+    loadCartCount();
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const loadFeaturedProducts = async () => {
@@ -37,7 +56,14 @@ export const LandingPage = () => {
     try {
       const productId = product.id || product._id;
       await carritoService.addItem(productId, 1);
-      // Opcional: mostrar notificación de éxito
+      
+      // Actualizar contador del carrito
+      setCartCount(prev => prev + 1);
+      
+      // Mostrar notificación de éxito
+      const productName = product.name || product.nombre || 'Producto';
+      setToast({ message: `${productName} añadido al carrito`, type: 'success' });
+      setTimeout(() => setToast(null), 3000);
     } catch (err) {
       console.error('Error al agregar al carrito:', err);
     }
@@ -73,9 +99,31 @@ export const LandingPage = () => {
 
   return (
     <div>
+      {/* Toast notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          right: '20px',
+          zIndex: 1000,
+          padding: '12px 20px',
+          background: toast.type === 'success' ? 'var(--color-success, #22c55e)' : 'var(--color-error, #ef4444)',
+          color: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: '500',
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          <span style={{ fontSize: '18px' }}>✓</span>
+          {toast.message}
+        </div>
+      )}
       <HFHeader 
         isAuthenticated={!!user} 
-        cartItems={0} 
+        cartItems={cartCount} 
         variant="transparent" 
         onNavigate={handleNavigate}
         onLogout={logout}

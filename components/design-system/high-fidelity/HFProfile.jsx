@@ -1,7 +1,78 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, CreditCard, MapPin, Lock, Save } from 'lucide-react';
 
-export default function HFProfile() {
+export default function HFProfile({ user, onSave, onNavigate }) {
+  const [formData, setFormData] = useState({
+    nombre: '',
+    email: '',
+    telefono: '',
+    cedula: '',
+    direccion: ''
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  // Sincronizar datos del usuario cuando llega
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        nombre: user.nombre || user.name || '',
+        email: user.email || '',
+        telefono: user.telefono || user.phone || '',
+        cedula: user.cedula || '',
+        direccion: user.direccion || user.address || ''
+      });
+    }
+  }, [user]);
+
+  const getInitials = () => {
+    const name = formData.nombre || 'Usuario';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePasswordChange = (field, value) => {
+    setPasswordData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage(null);
+    try {
+      if (onSave) {
+        await onSave(formData);
+        setMessage({ type: 'success', text: 'Cambios guardados correctamente' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Error al guardar' });
+    } finally {
+      setSaving(false);
+      setTimeout(() => setMessage(null), 3000);
+    }
+  };
+
+  const handleCancel = () => {
+    // Restablecer datos originales
+    if (user) {
+      setFormData({
+        nombre: user.nombre || user.name || '',
+        email: user.email || '',
+        telefono: user.telefono || user.phone || '',
+        cedula: user.cedula || '',
+        direccion: user.direccion || user.address || ''
+      });
+    }
+    if (onNavigate) onNavigate('landing');
+  };
+
   return (
     <div style={{
       background: 'var(--color-neutral-100)',
@@ -56,7 +127,7 @@ export default function HFProfile() {
             border: '4px solid white',
             boxShadow: 'var(--shadow-medium)'
           }}>
-            JP
+            {getInitials()}
           </div>
           <div style={{ flex: 1 }}>
             <h2 style={{
@@ -65,36 +136,14 @@ export default function HFProfile() {
               color: 'var(--color-neutral-900)',
               marginBottom: 'var(--space-2)'
             }}>
-              Juan Pérez
+              {formData.nombre || 'Usuario'}
             </h2>
             <p style={{
               fontSize: 'var(--font-size-body-m)',
-              color: 'var(--color-neutral-700)',
-              marginBottom: 'var(--space-4)'
+              color: 'var(--color-neutral-700)'
             }}>
               Cliente desde Enero 2024
             </p>
-            <button style={{
-              padding: 'var(--space-2) var(--space-4)',
-              background: 'var(--color-neutral-100)',
-              border: '1px solid var(--color-neutral-300)',
-              borderRadius: 'var(--radius-lg)',
-              fontSize: 'var(--font-size-body-s)',
-              fontWeight: 'var(--font-weight-medium)',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-primary)';
-              e.currentTarget.style.background = 'var(--color-primary-light)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-neutral-300)';
-              e.currentTarget.style.background = 'var(--color-neutral-100)';
-            }}
-            >
-              Cambiar Foto
-            </button>
           </div>
         </div>
 
@@ -118,12 +167,12 @@ export default function HFProfile() {
 
           <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
             {[
-              { icon: User, label: 'Nombre Completo', value: 'Juan Pérez González', type: 'text' },
-              { icon: Mail, label: 'Email', value: 'juan.perez@email.com', type: 'email' },
-              { icon: Phone, label: 'Teléfono', value: '+506 8888-8888', type: 'tel' },
-              { icon: CreditCard, label: 'Cédula', value: '1-0000-0000', type: 'text' },
-              { icon: MapPin, label: 'Dirección', value: 'San José, Costa Rica', type: 'text' }
-            ].map((field, i) => (
+              { icon: User, label: 'Nombre Completo', field: 'nombre', type: 'text' },
+              { icon: Mail, label: 'Email', field: 'email', type: 'email', disabled: true },
+              { icon: Phone, label: 'Teléfono', field: 'telefono', type: 'tel' },
+              { icon: CreditCard, label: 'Cédula', field: 'cedula', type: 'text' },
+              { icon: MapPin, label: 'Dirección', field: 'direccion', type: 'text' }
+            ].map((fieldConfig, i) => (
               <div key={i}>
                 <label style={{
                   display: 'flex',
@@ -134,12 +183,14 @@ export default function HFProfile() {
                   color: 'var(--color-neutral-900)',
                   marginBottom: 'var(--space-2)'
                 }}>
-                  <field.icon size={18} style={{ color: 'var(--color-primary)' }} />
-                  {field.label}
+                  <fieldConfig.icon size={18} style={{ color: 'var(--color-primary)' }} />
+                  {fieldConfig.label}
                 </label>
                 <input
-                  type={field.type}
-                  defaultValue={field.value}
+                  type={fieldConfig.type}
+                  value={formData[fieldConfig.field] || ''}
+                  onChange={(e) => handleInputChange(fieldConfig.field, e.target.value)}
+                  disabled={fieldConfig.disabled}
                   style={{
                     width: '100%',
                     padding: 'var(--space-3) var(--space-4)',
@@ -147,6 +198,7 @@ export default function HFProfile() {
                     borderRadius: 'var(--radius-lg)',
                     fontSize: 'var(--font-size-body-m)',
                     outline: 'none',
+                    background: fieldConfig.disabled ? 'var(--color-neutral-100)' : 'white',
                     transition: 'all 0.2s'
                   }}
                   onFocus={(e) => {
@@ -226,9 +278,26 @@ export default function HFProfile() {
           </div>
         </div>
 
+        {/* Feedback Message */}
+        {message && (
+          <div style={{
+            padding: 'var(--space-4)',
+            background: message.type === 'success' ? 'var(--color-success-light, #dcfce7)' : 'var(--color-error-light, #fee2e2)',
+            color: message.type === 'success' ? 'var(--color-success, #16a34a)' : 'var(--color-error, #dc2626)',
+            borderRadius: 'var(--radius-lg)',
+            marginBottom: 'var(--space-4)',
+            fontWeight: 'var(--font-weight-medium)',
+            textAlign: 'center'
+          }}>
+            {message.text}
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
-          <button style={{
+          <button 
+            onClick={handleCancel}
+            style={{
             flex: 1,
             padding: 'var(--space-4)',
             background: 'white',
@@ -249,16 +318,19 @@ export default function HFProfile() {
           >
             Cancelar
           </button>
-          <button style={{
+          <button 
+            onClick={handleSave}
+            disabled={saving}
+            style={{
             flex: 1,
             padding: 'var(--space-4)',
-            background: 'var(--color-primary)',
+            background: saving ? 'var(--color-neutral-400)' : 'var(--color-primary)',
             color: 'white',
             border: 'none',
             borderRadius: 'var(--radius-lg)',
             fontSize: 'var(--font-size-body-m)',
             fontWeight: 'var(--font-weight-semibold)',
-            cursor: 'pointer',
+            cursor: saving ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -267,18 +339,22 @@ export default function HFProfile() {
             transition: 'all 0.2s'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--color-primary-hover)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = 'var(--shadow-high)';
+            if (!saving) {
+              e.currentTarget.style.background = 'var(--color-primary-hover)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-high)';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--color-primary)';
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+            if (!saving) {
+              e.currentTarget.style.background = 'var(--color-primary)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+            }
           }}
           >
             <Save size={20} />
-            Guardar Cambios
+            {saving ? 'Guardando...' : 'Guardar Cambios'}
           </button>
         </div>
       </div>

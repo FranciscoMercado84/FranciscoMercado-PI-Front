@@ -1,17 +1,16 @@
 import React from 'react';
 import { Package, Calendar, Clock, MapPin, CheckCircle, Download, X, ArrowLeft, AlertCircle, Loader } from 'lucide-react';
 
-// Configuración de estados
+// Configuración de estados (valores del backend: Pendiente, En preparación, Listo, Entregado, Cancelado)
 const statusConfig = {
+  'Pendiente': { label: 'Pendiente', icon: AlertCircle, bgColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)', textColor: 'var(--color-warning-dark)' },
+  'En preparación': { label: 'En Preparación', icon: Loader, bgColor: 'var(--color-info-light, #e0f2fe)', borderColor: 'var(--color-info, #0ea5e9)', textColor: 'var(--color-info-dark, #0369a1)' },
+  'Listo': { label: 'Listo para Recoger', icon: CheckCircle, bgColor: 'var(--color-success-light)', borderColor: 'var(--color-success)', textColor: 'var(--color-success-dark)' },
+  'Entregado': { label: 'Entregado', icon: CheckCircle, bgColor: 'var(--color-success-light)', borderColor: 'var(--color-success)', textColor: 'var(--color-success-dark)' },
+  'Cancelado': { label: 'Cancelado', icon: X, bgColor: 'var(--color-error-light)', borderColor: 'var(--color-error)', textColor: 'var(--color-error-dark)' },
+  // Fallbacks para compatibilidad
   pending: { label: 'Pendiente', icon: AlertCircle, bgColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)', textColor: 'var(--color-warning-dark)' },
-  pendiente: { label: 'Pendiente', icon: AlertCircle, bgColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)', textColor: 'var(--color-warning-dark)' },
-  processing: { label: 'En Proceso', icon: Loader, bgColor: 'var(--color-info-light, #e0f2fe)', borderColor: 'var(--color-info, #0ea5e9)', textColor: 'var(--color-info-dark, #0369a1)' },
-  en_proceso: { label: 'En Proceso', icon: Loader, bgColor: 'var(--color-info-light, #e0f2fe)', borderColor: 'var(--color-info, #0ea5e9)', textColor: 'var(--color-info-dark, #0369a1)' },
-  completed: { label: 'Completado', icon: CheckCircle, bgColor: 'var(--color-success-light)', borderColor: 'var(--color-success)', textColor: 'var(--color-success-dark)' },
-  completado: { label: 'Completado', icon: CheckCircle, bgColor: 'var(--color-success-light)', borderColor: 'var(--color-success)', textColor: 'var(--color-success-dark)' },
-  entregado: { label: 'Entregado', icon: CheckCircle, bgColor: 'var(--color-success-light)', borderColor: 'var(--color-success)', textColor: 'var(--color-success-dark)' },
-  cancelled: { label: 'Cancelado', icon: X, bgColor: 'var(--color-error-light)', borderColor: 'var(--color-error)', textColor: 'var(--color-error-dark)' },
-  cancelado: { label: 'Cancelado', icon: X, bgColor: 'var(--color-error-light)', borderColor: 'var(--color-error)', textColor: 'var(--color-error-dark)' }
+  pendiente: { label: 'Pendiente', icon: AlertCircle, bgColor: 'var(--color-warning-light)', borderColor: 'var(--color-warning)', textColor: 'var(--color-warning-dark)' }
 };
 
 // Datos mock por defecto
@@ -31,21 +30,25 @@ const defaultOrder = {
   total: 22.15
 };
 
-export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = false }) {
+export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = false, onStatusChange }) {
   // Normalizar el pedido
   const normalizeOrder = (o) => {
     if (!o) return defaultOrder;
     
-    // Normalizar items
-    const items = (o.items || o.productos || []).map(item => ({
-      name: item.name || item.nombre || item.producto?.nombre || 'Producto',
-      qty: item.qty || item.quantity || item.cantidad || 1,
-      price: item.price || item.precio || item.producto?.precio || 0
-    }));
+    // Normalizar items - manejar estructura anidada del backend
+    const items = (o.items || o.productos || []).map(item => {
+      // El backend puede enviar producto como objeto anidado
+      const producto = item.producto || item;
+      return {
+        name: item.name || item.nombre || producto.nombre || 'Producto',
+        qty: item.qty || item.quantity || item.cantidad || 1,
+        price: item.price || item.precio || item.precio_unitario || producto.precio || 0
+      };
+    });
     
     // Calcular totales
     const subtotal = o.subtotal || items.reduce((sum, item) => sum + (item.qty * item.price), 0);
-    const tax = o.tax || o.impuesto || (subtotal * 0.13);
+    const tax = o.tax || o.impuesto || o.iva || (subtotal * 0.13);
     const total = o.total || (subtotal + tax);
     
     // Formatear fecha
@@ -54,22 +57,45 @@ export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = 
       const d = new Date(o.createdAt || o.fechaCreacion);
       dateFormatted = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
     }
+
+    // Formatear hora de recogida
+    let pickupTimeFormatted = 'No especificado';
+    const horaRecogida = o.pickupTime || o.horaRecogida || o.hora_recogida || o.horarioRetiro;
+    if (horaRecogida) {
+      try {
+        const d = new Date(horaRecogida);
+        if (!isNaN(d.getTime())) {
+          pickupTimeFormatted = d.toLocaleString('es-ES', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        } else {
+          pickupTimeFormatted = horaRecogida;
+        }
+      } catch {
+        pickupTimeFormatted = horaRecogida;
+      }
+    }
     
     return {
       id: o.id || o._id || o.orderId || 'N/A',
       status: o.status || o.estado || 'pending',
       date: dateFormatted || 'Fecha no disponible',
-      pickupTime: o.pickupTime || o.horaRecogida || o.horarioRetiro || 'No especificado',
+      pickupTime: pickupTimeFormatted,
       location: o.location || o.ubicacion || o.direccion || 'Av. Central, San José',
       items,
       subtotal,
       tax,
-      total
+      total,
+      cliente: o.nombre_cliente || o.cliente || o.usuario?.nombre || 'Cliente',
+      telefono: o.telefono || ''
     };
   };
 
   const order = normalizeOrder(propOrder);
-  const status = statusConfig[order.status] || statusConfig.pending;
+  const status = statusConfig[order.status] || statusConfig['Pendiente'];
   const StatusIcon = status.icon;
 
   return (
@@ -286,6 +312,94 @@ export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = 
             </div>
           </div>
         </div>
+
+        {/* Admin Status Change */}
+        {isAdmin && onStatusChange && (() => {
+          // Transiciones válidas según el backend
+          const allowedTransitions = {
+            'Pendiente': ['En preparación', 'Cancelado'],
+            'En preparación': ['Listo', 'Cancelado'],
+            'Listo': ['Entregado'],
+            'Entregado': [],
+            'Cancelado': []
+          };
+          
+          const statusStyles = {
+            'En preparación': { label: 'En Preparación', color: 'var(--color-info, #0ea5e9)' },
+            'Listo': { label: 'Listo para Recoger', color: 'var(--color-success)' },
+            'Entregado': { label: 'Entregado', color: 'var(--color-success-dark, #15803d)' },
+            'Cancelado': { label: 'Cancelar Pedido', color: 'var(--color-error)' }
+          };
+          
+          const currentStatus = order.status || 'Pendiente';
+          const availableTransitions = allowedTransitions[currentStatus] || [];
+          
+          if (availableTransitions.length === 0) {
+            return null; // No mostrar si no hay transiciones disponibles
+          }
+          
+          return (
+            <div style={{
+              background: 'white',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--color-neutral-300)',
+              padding: 'var(--space-6)',
+              marginBottom: 'var(--space-6)',
+              boxShadow: 'var(--shadow-low)'
+            }}>
+              <h3 style={{
+                fontSize: 'var(--font-size-h6)',
+                fontWeight: 'var(--font-weight-semibold)',
+                color: 'var(--color-neutral-900)',
+                marginBottom: 'var(--space-4)'
+              }}>
+                Cambiar Estado del Pedido
+              </h3>
+              <p style={{
+                fontSize: 'var(--font-size-body-s)',
+                color: 'var(--color-neutral-600)',
+                marginBottom: 'var(--space-4)'
+              }}>
+                Estado actual: <strong>{currentStatus}</strong>
+              </p>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                {availableTransitions.map(nextStatus => {
+                  const style = statusStyles[nextStatus];
+                  return (
+                    <button
+                      key={nextStatus}
+                      onClick={() => onStatusChange(order.id, nextStatus)}
+                      style={{
+                        padding: 'var(--space-2) var(--space-4)',
+                        background: 'white',
+                        color: style.color,
+                        border: `2px solid ${style.color}`,
+                        borderRadius: 'var(--radius-lg)',
+                        fontSize: 'var(--font-size-body-s)',
+                        fontWeight: 'var(--font-weight-semibold)',
+                        cursor: 'pointer',
+                        opacity: 0.9,
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = style.color;
+                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'white';
+                        e.currentTarget.style.color = style.color;
+                        e.currentTarget.style.opacity = '0.9';
+                      }}
+                    >
+                      {style.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: isAdmin ? 'flex-start' : 'center' }}>

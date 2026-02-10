@@ -1,12 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { carritoService } from '../services/api';
 import HFHeader from '../../components/design-system/high-fidelity/HFHeader';
 import HFFooter from '../../components/design-system/high-fidelity/HFFooter';
 
 export const CustomerLayout = ({ children }) => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
+  const [cartCount, setCartCount] = useState(0);
+
+  // Cargar cantidad de items en el carrito
+  useEffect(() => {
+    const loadCartCount = async () => {
+      if (isAuthenticated) {
+        try {
+          const cart = await carritoService.get();
+          const items = cart.items || cart.productos || [];
+          const count = items.reduce((sum, item) => sum + (item.cantidad || item.quantity || 1), 0);
+          setCartCount(count);
+        } catch (err) {
+          console.error('Error al cargar carrito:', err);
+          setCartCount(0);
+        }
+      } else {
+        setCartCount(0);
+      }
+    };
+    loadCartCount();
+  }, [isAuthenticated]);
 
   const handleNavigate = (screenId) => {
     const routes = {
@@ -37,7 +59,7 @@ export const CustomerLayout = ({ children }) => {
     }}>
       <HFHeader 
         isAuthenticated={!!user} 
-        cartItems={0} 
+        cartItems={cartCount} 
         variant="transparent" 
         onNavigate={handleNavigate}
         onLogout={logout}

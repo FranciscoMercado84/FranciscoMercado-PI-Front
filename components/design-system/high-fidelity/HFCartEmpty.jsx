@@ -1,13 +1,34 @@
 import React from 'react';
 import { ShoppingBag, ArrowRight } from 'lucide-react';
 
-export default function HFCartEmpty({ onNavigate }) {
-  const suggestions = [
-    { id: 1, name: 'Baguette Francesa', price: 3.50, emoji: '🥖' },
-    { id: 2, name: 'Croissant', price: 2.80, emoji: '🥐' },
-    { id: 3, name: 'Pan Integral', price: 4.20, emoji: '🍞' },
-    { id: 4, name: 'Bagel', price: 3.00, emoji: '🥯' },
-  ];
+// Productos por defecto si no se pasan sugerencias
+const defaultSuggestions = [
+  { id: 1, name: 'Baguette Francesa', price: 3.50, emoji: '🥖' },
+  { id: 2, name: 'Croissant', price: 2.80, emoji: '🥐' },
+  { id: 3, name: 'Pan Integral', price: 4.20, emoji: '🍞' },
+  { id: 4, name: 'Bagel', price: 3.00, emoji: '🥯' },
+];
+
+// Emojis para categorías
+const categoryEmojis = {
+  'Pan': '🥖',
+  'Pastelería': '🥐',
+  'Especiales': '🍞',
+  'Bebidas': '☕',
+  'default': '🥯'
+};
+
+export default function HFCartEmpty({ onNavigate, suggestions: propSuggestions, onAddToCart }) {
+  // Normalizar sugerencias del backend
+  const normalizedSuggestions = (propSuggestions && propSuggestions.length > 0)
+    ? propSuggestions.slice(0, 4).map(p => ({
+        id: p.id || p._id,
+        name: p.name || p.nombre || 'Producto',
+        price: p.price || p.precio || 0,
+        image: p.image || p.imagen || p.imagen_url,
+        emoji: categoryEmojis[p.category || p.categoria] || categoryEmojis.default
+      }))
+    : defaultSuggestions;
 
   return (
     <div style={{
@@ -114,7 +135,7 @@ export default function HFCartEmpty({ onNavigate }) {
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
             gap: 'var(--space-5)'
           }}>
-            {suggestions.map(product => (
+            {normalizedSuggestions.map(product => (
               <div
                 key={product.id}
                 style={{
@@ -136,13 +157,13 @@ export default function HFCartEmpty({ onNavigate }) {
               >
                 <div style={{
                   aspectRatio: '1/1',
-                  background: 'var(--color-neutral-200)',
+                  background: product.image ? `url(${product.image}) center/cover` : 'var(--color-neutral-200)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '56px'
                 }}>
-                  {product.emoji}
+                  {!product.image && product.emoji}
                 </div>
                 <div style={{ padding: 'var(--space-4)' }}>
                   <h3 style={{
@@ -165,7 +186,12 @@ export default function HFCartEmpty({ onNavigate }) {
                     }}>
                       ${product.price.toFixed(2)}
                     </span>
-                    <button style={{
+                    <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddToCart?.(product);
+                    }}
+                    style={{
                       padding: 'var(--space-2) var(--space-3)',
                       background: 'var(--color-primary-light)',
                       color: 'var(--color-primary)',

@@ -184,9 +184,9 @@ export default function HFFooter({ onNavigate }) {
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
               {[
-                { day: 'Lun - Vie', hours: '7:00 AM - 7:00 PM' },
-                { day: 'Sábado', hours: '8:00 AM - 6:00 PM' },
-                { day: 'Domingo', hours: 'Cerrado' }
+                { day: 'Lun - Vie', hours: '7:00 - 14:30 y 17:30 - 20:30' },
+                { day: 'Sábado', hours: '7:00 - 14:30' },
+                { day: 'Domingo', hours: '7:00 - 14:30' }
               ].map(item => (
                 <div key={item.day} style={{
                   display: 'flex',

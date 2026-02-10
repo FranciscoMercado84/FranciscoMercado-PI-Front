@@ -65,22 +65,22 @@ export default function HFAdminOrders({ orders: propOrders, onNavigate }) {
     }
   }).length || orders.length; // Fallback to all orders if date parsing fails
 
-  const pendingOrders = orders.filter(o => o.status === 'pending' || o.status === 'pendiente').length;
-  const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'completado' || o.status === 'entregado').length;
+  const pendingOrders = orders.filter(o => o.status === 'Pendiente' || o.status === 'pending' || o.status === 'pendiente').length;
+  const completedOrders = orders.filter(o => o.status === 'Entregado' || o.status === 'completed' || o.status === 'completado' || o.status === 'entregado').length;
 
   const getStatusConfig = (status) => {
     const configs = {
+      // Valores del backend (exactos)
+      'Pendiente': { label: 'Pendiente', color: 'var(--color-warning)', bg: 'var(--color-warning-light)', icon: Clock },
+      'En preparación': { label: 'En Preparación', color: 'var(--color-info, #0ea5e9)', bg: 'var(--color-info-light, #e0f2fe)', icon: Loader },
+      'Listo': { label: 'Listo para Recoger', color: 'var(--color-success)', bg: 'var(--color-success-light)', icon: CheckCircle },
+      'Entregado': { label: 'Entregado', color: 'var(--color-success)', bg: 'var(--color-success-light)', icon: CheckCircle },
+      'Cancelado': { label: 'Cancelado', color: 'var(--color-error)', bg: 'var(--color-error-light)', icon: XCircle },
+      // Fallbacks para compatibilidad
       pending: { label: 'Pendiente', color: 'var(--color-warning)', bg: 'var(--color-warning-light)', icon: Clock },
-      pendiente: { label: 'Pendiente', color: 'var(--color-warning)', bg: 'var(--color-warning-light)', icon: Clock },
-      processing: { label: 'En Proceso', color: 'var(--color-info, #0ea5e9)', bg: 'var(--color-info-light, #e0f2fe)', icon: Loader },
-      en_proceso: { label: 'En Proceso', color: 'var(--color-info, #0ea5e9)', bg: 'var(--color-info-light, #e0f2fe)', icon: Loader },
-      completed: { label: 'Completado', color: 'var(--color-success)', bg: 'var(--color-success-light)', icon: CheckCircle },
-      completado: { label: 'Completado', color: 'var(--color-success)', bg: 'var(--color-success-light)', icon: CheckCircle },
-      entregado: { label: 'Entregado', color: 'var(--color-success)', bg: 'var(--color-success-light)', icon: CheckCircle },
-      cancelled: { label: 'Cancelado', color: 'var(--color-error)', bg: 'var(--color-error-light)', icon: XCircle },
-      cancelado: { label: 'Cancelado', color: 'var(--color-error)', bg: 'var(--color-error-light)', icon: XCircle }
+      pendiente: { label: 'Pendiente', color: 'var(--color-warning)', bg: 'var(--color-warning-light)', icon: Clock }
     };
-    return configs[status] || configs.pending;
+    return configs[status] || configs['Pendiente'];
   };
 
   return (
@@ -239,11 +239,15 @@ export default function HFAdminOrders({ orders: propOrders, onNavigate }) {
             >
               <div style={{
                 fontFamily: 'monospace',
-                fontSize: 'var(--font-size-body-m)',
+                fontSize: 'var(--font-size-body-s)',
                 fontWeight: 'var(--font-weight-semibold)',
-                color: 'var(--color-neutral-900)'
+                color: 'var(--color-neutral-900)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                title: order.id
               }}>
-                {order.id}
+                #{String(order.id).slice(-8).toUpperCase()}
               </div>
               <div style={{
                 fontSize: 'var(--font-size-body-m)',
