@@ -1,34 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { carritoService } from '../services/api';
+import { useCart } from '../context/CartContext';
 import HFHeader from '../../components/design-system/high-fidelity/HFHeader';
 import HFFooter from '../../components/design-system/high-fidelity/HFFooter';
 
 export const CustomerLayout = ({ children }) => {
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated } = useAuth();
-  const [cartCount, setCartCount] = useState(0);
-
-  // Cargar cantidad de items en el carrito
-  useEffect(() => {
-    const loadCartCount = async () => {
-      if (isAuthenticated) {
-        try {
-          const cart = await carritoService.get();
-          const items = cart.items || cart.productos || [];
-          const count = items.reduce((sum, item) => sum + (item.cantidad || item.quantity || 1), 0);
-          setCartCount(count);
-        } catch (err) {
-          console.error('Error al cargar carrito:', err);
-          setCartCount(0);
-        }
-      } else {
-        setCartCount(0);
-      }
-    };
-    loadCartCount();
-  }, [isAuthenticated]);
+  const location = useLocation();
+  const { user, logout } = useAuth();
+  const { cartCount } = useCart();
 
   const handleNavigate = (screenId) => {
     const routes = {
@@ -36,17 +17,24 @@ export const CustomerLayout = ({ children }) => {
       'catalog': '/catalog',
       'cart': '/cart',
       'profile': '/profile',
-      'login': '/login',
-      'contact': 'footer'
+      'login': '/login'
     };
-    
-    const route = routes[screenId];
-    if (route === 'footer') {
-      const footer = document.querySelector('footer');
-      if (footer) {
-        footer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Para about y contact, verificar si estamos en la landing
+    if (screenId === 'about' || screenId === 'contact') {
+      const element = document.getElementById(screenId);
+      if (element) {
+        // Si el elemento existe, hacer scroll
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        // Si no existe, navegar a la landing con hash
+        navigate(`/#${screenId}`);
       }
-    } else if (route) {
+      return;
+    }
+
+    const route = routes[screenId];
+    if (route) {
       navigate(route);
     }
   };

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Trash2, Plus, Minus, ArrowRight, Tag } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trash2, Plus, Minus, ArrowRight, Tag, RefreshCw, ShoppingBag } from 'lucide-react';
 
 // Items por defecto cuando no se pasan props
 const defaultCartItems = [
@@ -8,22 +8,40 @@ const defaultCartItems = [
   { id: 3, name: 'Pan Integral', price: 4.20, quantity: 1, emoji: '🍞' },
 ];
 
-// Mapa de emojis por categoría
+// Mapa de emojis por categoría (sincronizado con backend)
 const categoryEmojis = {
-  'Pan': '🍞',
+  'Despensa y básicos': '🧂',
+  'Conservas y Enlatados': '🥫',
+  'Aceites, Vinagres y Salsas': '🍶',
+  'Bebidas y Bodega': '🍷',
+  'Charcutería': '🥓',
+  'Dulces': '🍰',
   'Panadería': '🥖',
-  'Pastelería': '🥐',
-  'Especiales': '🧄',
+  'Pan': '🍞',  // Para compatibilidad con datos antiguos
+  'Pastelería': '🥐',  // Para compatibilidad con datos antiguos
+  'Especiales': '🧄',  // Para compatibilidad con datos antiguos
   'default': '🥯'
 };
 
-export default function HFCart({ 
-  onNavigate, 
+export default function HFCart({
+  onNavigate,
   cart: propCart,
   onUpdateQuantity,
   onRemoveItem,
-  onClearCart
+  onClearCart,
+  frecuentProducts = [],
+  onAddFrequentProduct,
+  isAuthenticated = false
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detectar tamaño de pantalla para responsive
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   // Normalizar items del carrito
   const normalizeCartItem = (item) => {
     const producto = item.producto || item;
@@ -88,7 +106,7 @@ export default function HFCart({
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 450px',
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 450px',
           gap: 'var(--space-6)',
           alignItems: 'start'
         }}>
@@ -280,6 +298,134 @@ export default function HFCart({
             >
               ← Continuar Comprando
             </button>
+
+            {/* Sección Pedir de Nuevo - Productos Frecuentes */}
+            {isAuthenticated && frecuentProducts.length > 0 && (
+              <div style={{
+                marginTop: 'var(--space-6)',
+                background: 'white',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--color-neutral-300)',
+                padding: 'var(--space-5)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--space-2)',
+                  marginBottom: 'var(--space-4)'
+                }}>
+                  <RefreshCw size={20} style={{ color: 'var(--color-primary)' }} />
+                  <h3 style={{
+                    fontSize: 'var(--font-size-h6)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--color-neutral-900)',
+                    margin: 0
+                  }}>
+                    Pedir de Nuevo
+                  </h3>
+                </div>
+                <p style={{
+                  fontSize: 'var(--font-size-body-s)',
+                  color: 'var(--color-neutral-700)',
+                  marginBottom: 'var(--space-4)'
+                }}>
+                  Productos que has pedido anteriormente
+                </p>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                  gap: 'var(--space-3)'
+                }}>
+                  {frecuentProducts.slice(0, 4).map((product) => (
+                    <div
+                      key={product.id}
+                      style={{
+                        background: 'var(--color-neutral-50)',
+                        borderRadius: 'var(--radius-lg)',
+                        padding: 'var(--space-3)',
+                        textAlign: 'center',
+                        border: '1px solid var(--color-neutral-200)',
+                        transition: 'all 0.2s',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-neutral-200)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      <div style={{
+                        width: '50px',
+                        height: '50px',
+                        margin: '0 auto var(--space-2)',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'var(--color-neutral-200)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden'
+                      }}>
+                        {product.imagen ? (
+                          <img
+                            src={product.imagen}
+                            alt={product.nombre}
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                          />
+                        ) : (
+                          <ShoppingBag size={24} style={{ color: 'var(--color-neutral-500)' }} />
+                        )}
+                      </div>
+                      <p style={{
+                        fontSize: 'var(--font-size-body-s)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        color: 'var(--color-neutral-900)',
+                        marginBottom: 'var(--space-1)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {product.nombre}
+                      </p>
+                      <p style={{
+                        fontSize: 'var(--font-size-caption)',
+                        color: 'var(--color-neutral-500)',
+                        marginBottom: 'var(--space-2)'
+                      }}>
+                        Pedido {product.frecuencia}x
+                      </p>
+                      <button
+                        onClick={() => onAddFrequentProduct?.(product.id)}
+                        style={{
+                          width: '100%',
+                          padding: 'var(--space-2)',
+                          background: 'var(--color-primary-light)',
+                          color: 'var(--color-primary)',
+                          border: 'none',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: 'var(--font-size-caption)',
+                          fontWeight: 'var(--font-weight-semibold)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'var(--color-primary)';
+                          e.currentTarget.style.color = 'white';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'var(--color-primary-light)';
+                          e.currentTarget.style.color = 'var(--color-primary)';
+                        }}
+                      >
+                        + Añadir
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Order Summary */}

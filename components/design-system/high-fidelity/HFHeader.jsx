@@ -20,13 +20,30 @@ export default function HFHeader({ isAuthenticated = false, cartItems = 0, varia
         alignItems: 'center'
       }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+        <div 
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', cursor: 'pointer' }}
+          onClick={() => onNavigate?.('landing')}
+        >
+          <img 
+            src="/logo-panaderia-puri.png" 
+            alt="Panadería Puri" 
+            style={{
+              width: '52px',
+              height: '52px',
+              objectFit: 'contain',
+              borderRadius: 'var(--radius-lg)'
+            }}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextSibling.style.display = 'flex';
+            }}
+          />
           <div style={{
-            width: '48px',
-            height: '48px',
+            width: '52px',
+            height: '52px',
             background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)',
             borderRadius: 'var(--radius-lg)',
-            display: 'flex',
+            display: 'none',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '24px',
@@ -43,15 +60,16 @@ export default function HFHeader({ isAuthenticated = false, cartItems = 0, varia
               margin: 0,
               lineHeight: 1
             }}>
-              Panadería
+              Panadería Puri
             </h1>
             <p style={{
               fontSize: 'var(--font-size-caption)',
               color: 'var(--color-neutral-500)',
               margin: 0,
-              lineHeight: 1
+              lineHeight: 1,
+              fontStyle: 'italic'
             }}>
-              Artesanal
+              Tu tienda de siempre
             </p>
           </div>
         </div>
@@ -65,6 +83,7 @@ export default function HFHeader({ isAuthenticated = false, cartItems = 0, varia
           {[
             { label: 'Inicio', route: 'landing' },
             { label: 'Productos', route: 'catalog' },
+            { label: 'Nosotros', route: 'about' },
             { label: 'Contacto', route: 'contact' }
           ].map(item => (
             <a

@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '../context/AuthContext';
+import { CartProvider } from '../context/CartContext';
 import { ProtectedRoute } from './ProtectedRoute';
 
 // Layouts
@@ -41,6 +42,7 @@ export const AppRouter = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <CartProvider>
         <Routes>
           {/* Public Routes */}
           <Route element={<PublicLayout />}>
@@ -96,6 +98,7 @@ export const AppRouter = () => {
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+        </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -6,10 +6,12 @@ import { ErrorState } from '../../components/states/ErrorState';
 import { SuccessState } from '../../components/states/SuccessState';
 import { carritoService, pedidoService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { clearCart } = useCart();
   const [cart, setCart] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -58,7 +60,7 @@ export const CheckoutPage = () => {
       
       // Limpiar carrito después de crear pedido
       try {
-        await carritoService.clear();
+        await clearCart();
       } catch (e) {
         console.warn('Error al limpiar carrito:', e);
       }

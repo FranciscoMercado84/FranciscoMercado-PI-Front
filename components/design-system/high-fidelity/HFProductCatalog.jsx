@@ -2,26 +2,32 @@ import React, { useState } from 'react';
 import HFFooter from './HFFooter';
 import { Search, SlidersHorizontal, Grid, List } from 'lucide-react';
 
-// Productos de ejemplo para cuando no se pasen props
+// Productos de ejemplo para cuando no se pasen props (sincronizados con backend)
 const defaultProducts = [
-  { id: 1, name: 'Baguette Francesa', price: 3.50, category: 'Pan', emoji: '🥖', badge: 'Popular' },
-  { id: 2, name: 'Croissant Mantequilla', price: 2.80, category: 'Pastelería', emoji: '🥐', badge: 'Nuevo' },
-  { id: 3, name: 'Pan Integral', price: 4.20, category: 'Pan', emoji: '🍞', badge: null },
-  { id: 4, name: 'Bagel', price: 3.00, category: 'Pan', emoji: '🥯', badge: null },
-  { id: 5, name: 'Pan de Ajo', price: 4.50, category: 'Especiales', emoji: '🧄', badge: 'Popular' },
-  { id: 6, name: 'Donut', price: 2.50, category: 'Pastelería', emoji: '🍩', badge: null },
-  { id: 7, name: 'Pretzel', price: 3.20, category: 'Pan', emoji: '🥨', badge: null },
-  { id: 8, name: 'Pan Dulce', price: 2.90, category: 'Pastelería', emoji: '🧁', badge: 'Nuevo' },
+  { id: 1, name: 'Baguette Francesa', price: 3.50, category: 'Panadería', emoji: '🥖', badge: 'Popular' },
+  { id: 2, name: 'Croissant Mantequilla', price: 2.80, category: 'Panadería', emoji: '🥐', badge: 'Nuevo' },
+  { id: 3, name: 'Pan Integral', price: 4.20, category: 'Panadería', emoji: '🍞', badge: null },
+  { id: 4, name: 'Bagel', price: 3.00, category: 'Panadería', emoji: '🥯', badge: null },
+  { id: 5, name: 'Pan de Ajo', price: 4.50, category: 'Panadería', emoji: '🧄', badge: 'Popular' },
+  { id: 6, name: 'Donut', price: 2.50, category: 'Dulces', emoji: '🍩', badge: null },
+  { id: 7, name: 'Pretzel', price: 3.20, category: 'Panadería', emoji: '🥨', badge: null },
+  { id: 8, name: 'Pan Dulce', price: 2.90, category: 'Dulces', emoji: '🧁', badge: 'Nuevo' },
 ];
 
-// Mapa de emojis por categoría para productos sin imagen
+// Mapa de emojis por categoría para productos sin imagen (sincronizado con backend)
 const categoryEmojis = {
-  'Pan': '🍞',
+  'Despensa y básicos': '🧂',
+  'Conservas y Enlatados': '🥫',
+  'Aceites, Vinagres y Salsas': '🍶',
+  'Bebidas y Bodega': '🍷',
+  'Charcutería': '🥓',
+  'Dulces': '🍰',
   'Panadería': '🥖',
-  'Pastelería': '🥐',
-  'Especiales': '🧄',
-  'Bebidas': '☕',
-  'Postres': '🍰',
+  'Pan': '🍞',  // Para compatibilidad con datos antiguos
+  'Pastelería': '🥐',  // Para compatibilidad con datos antiguos
+  'Especiales': '🧄',  // Para compatibilidad con datos antiguos
+  'Bebidas': '☕',  // Para compatibilidad con datos antiguos
+  'Postres': '🍰',  // Para compatibilidad con datos antiguos
   'default': '🥯'
 };
 
@@ -268,13 +274,15 @@ export default function HFProductCatalog({ onNavigate, products: propProducts, o
                   overflow: 'hidden'
                 }}>
                   {p.image ? (
-                    <img 
-                      src={p.image} 
+                    <img
+                      src={p.image}
                       alt={p.name}
                       style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover'
+                        objectFit: 'contain',
+                        padding: 'var(--space-3)',
+                        background: 'white'
                       }}
                       onError={(e) => {
                         e.target.style.display = 'none';

@@ -37,12 +37,26 @@ export default function HFFooter({ onNavigate }) {
           {/* Brand Column */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+              <img 
+                src="/logo-panaderia-puri.png" 
+                alt="Panadería Puri" 
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  objectFit: 'contain',
+                  borderRadius: 'var(--radius-lg)'
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextSibling.style.display = 'flex';
+                }}
+              />
               <div style={{
-                width: '40px',
-                height: '40px',
+                width: '44px',
+                height: '44px',
                 background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)',
                 borderRadius: 'var(--radius-lg)',
-                display: 'flex',
+                display: 'none',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '20px'
@@ -57,7 +71,7 @@ export default function HFFooter({ onNavigate }) {
                   margin: 0,
                   color: 'var(--color-neutral-50)'
                 }}>
-                  Panadería Artesanal
+                  Panadería Puri
                 </h3>
               </div>
             </div>
@@ -65,9 +79,18 @@ export default function HFFooter({ onNavigate }) {
               fontSize: 'var(--font-size-body-s)',
               color: 'var(--color-neutral-300)',
               lineHeight: 1.6,
-              margin: 0
+              margin: 0,
+              fontStyle: 'italic'
             }}>
-              Pan fresco todos los días, hecho con amor y dedicación. Tradición y calidad en cada bocado.
+              "Tu tienda de siempre, cada día más cerca."
+            </p>
+            <p style={{
+              fontSize: 'var(--font-size-body-s)',
+              color: 'var(--color-neutral-300)',
+              lineHeight: 1.6,
+              margin: 'var(--space-3) 0 0 0'
+            }}>
+              Pan recién horneado y productos de alimentación básica. Tradición, cercanía y confianza en tu barrio.
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
               {[Facebook, Instagram, Mail].map((Icon, i) => (
@@ -166,7 +189,7 @@ export default function HFFooter({ onNavigate }) {
               <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
                 <Mail size={18} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
                 <span style={{ fontSize: 'var(--font-size-body-s)', color: 'var(--color-neutral-300)' }}>
-                  info@panaderia.com
+                  admin@panaderia.com
                 </span>
               </div>
             </div>
@@ -215,7 +238,7 @@ export default function HFFooter({ onNavigate }) {
             color: 'var(--color-neutral-500)',
             margin: 0
           }}>
-            © 2026 Panadería Artesanal. Todos los derechos reservados.
+            © 2026 Panadería Puri. Todos los derechos reservados.
           </p>
           <div style={{ display: 'flex', gap: 'var(--space-5)' }}>
             {['Privacidad', 'Términos', 'Cookies'].map(link => (

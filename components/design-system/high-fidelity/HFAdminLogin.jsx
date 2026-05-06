@@ -36,17 +36,25 @@ export default function HFAdminLogin({ onNavigate, onLogin, isLoading = false, e
           <div style={{
             width: '90px',
             height: '90px',
-            background: 'linear-gradient(135deg, var(--color-secondary) 0%, var(--color-secondary-hover) 100%)',
+            background: 'white',
             borderRadius: 'var(--radius-xl)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '44px',
             margin: '0 auto var(--space-4)',
             boxShadow: 'var(--shadow-medium)',
-            position: 'relative'
+            position: 'relative',
+            overflow: 'hidden'
           }}>
-            🥖
+            <img 
+              src="/logo-panaderia-puri.png" 
+              alt="Panadería Puri" 
+              style={{ width: '80px', height: '80px', objectFit: 'contain' }}
+              onError={(e) => { 
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement.innerHTML = '<span style="font-size:44px">🥖</span>';
+              }}
+            />
             <div style={{
               position: 'absolute',
               top: '-8px',
@@ -73,6 +81,14 @@ export default function HFAdminLogin({ onNavigate, onLogin, isLoading = false, e
           }}>
             Panel de Administración
           </h1>
+          <p style={{
+            fontSize: 'var(--font-size-body-s)',
+            color: 'var(--color-primary)',
+            fontStyle: 'italic',
+            marginBottom: 'var(--space-2)'
+          }}>
+            Panadería Puri
+          </p>
           <p style={{
             fontSize: 'var(--font-size-body-m)',
             color: 'var(--color-neutral-700)'

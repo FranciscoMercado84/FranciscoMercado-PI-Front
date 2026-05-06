@@ -9,12 +9,19 @@ const defaultSuggestions = [
   { id: 4, name: 'Bagel', price: 3.00, emoji: '🥯' },
 ];
 
-// Emojis para categorías
+// Emojis para categorías (sincronizados con backend)
 const categoryEmojis = {
-  'Pan': '🥖',
-  'Pastelería': '🥐',
-  'Especiales': '🍞',
-  'Bebidas': '☕',
+  'Despensa y básicos': '🧂',
+  'Conservas y Enlatados': '🥫',
+  'Aceites, Vinagres y Salsas': '🍶',
+  'Bebidas y Bodega': '🍷',
+  'Charcutería': '🥓',
+  'Dulces': '🍰',
+  'Panadería': '🥖',
+  'Pan': '🥖',  // Para compatibilidad con datos antiguos
+  'Pastelería': '🥐',  // Para compatibilidad con datos antiguos
+  'Especiales': '🍞',  // Para compatibilidad con datos antiguos
+  'Bebidas': '☕',  // Para compatibilidad con datos antiguos
   'default': '🥯'
 };
 

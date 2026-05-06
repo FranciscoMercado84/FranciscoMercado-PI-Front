@@ -49,11 +49,11 @@ export default function HFAdminSettings() {
 
           <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
             {[
-              { icon: Store, label: 'Nombre del Negocio', placeholder: 'Panadería Artesanal', type: 'text' },
-              { icon: Phone, label: 'Teléfono', placeholder: '+506 2222-2222', type: 'tel' },
-              { icon: Mail, label: 'Email de Contacto', placeholder: 'info@panaderia.com', type: 'email' },
-              { icon: MapPin, label: 'Dirección', placeholder: 'Av. Central, San José', type: 'text' },
-              { icon: Globe, label: 'Sitio Web', placeholder: 'www.panaderia.com', type: 'url' }
+              { icon: Store, label: 'Nombre del Negocio', placeholder: 'Panadería Puri', type: 'text' },
+              { icon: Phone, label: 'Teléfono', placeholder: '+34 XXX XXX XXX', type: 'tel' },
+              { icon: Mail, label: 'Email de Contacto', placeholder: 'admin@panaderia.com', type: 'email' },
+              { icon: MapPin, label: 'Dirección', placeholder: 'Calle comercial del barrio', type: 'text' },
+              { icon: Globe, label: 'Sitio Web', placeholder: 'www.panaderiapuri.com', type: 'url' }
             ].map((field, i) => (
               <div key={i}>
                 <label style={{

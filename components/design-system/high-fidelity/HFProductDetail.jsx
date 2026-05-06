@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import HFFooter from './HFFooter';
-import { Star, Heart, Minus, Plus, ShoppingCart, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Heart, Minus, Plus, ShoppingCart, Info } from 'lucide-react';
 
 // Producto por defecto cuando no se pasa prop
 const defaultProduct = {
@@ -16,23 +15,45 @@ const defaultProduct = {
   reviews: 128
 };
 
-// Mapa de emojis por categoría
+// Mapa de emojis por categoría (sincronizado con backend)
 const categoryEmojis = {
-  'Pan': '🍞',
+  'Despensa y básicos': '🧂',
+  'Conservas y Enlatados': '🥫',
+  'Aceites, Vinagres y Salsas': '🍶',
+  'Bebidas y Bodega': '🍷',
+  'Charcutería': '🥓',
+  'Dulces': '🍰',
   'Panadería': '🥖',
-  'Pastelería': '🥐',
-  'Especiales': '🧄',
-  'Bebidas': '☕',
-  'Postres': '🍰',
+  'Pan': '🍞',  // Para compatibilidad con datos antiguos
+  'Pastelería': '🥐',  // Para compatibilidad con datos antiguos
+  'Especiales': '🧄',  // Para compatibilidad con datos antiguos
+  'Bebidas': '☕',  // Para compatibilidad con datos antiguos
+  'Postres': '🍰',  // Para compatibilidad con datos antiguos
   'default': '🥯'
 };
 
 export default function HFProductDetail({ onNavigate, product: propProduct, onAddToCart }) {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  // Detectar tamaño de pantalla para responsive
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Normalizar el producto
   const rawProduct = propProduct || defaultProduct;
+
+  // Verificar si la imagen es una URL válida
+  const rawImage = rawProduct.image || rawProduct.imagen_url || rawProduct.imagen;
+  const isValidImageUrl = rawImage && typeof rawImage === 'string' &&
+    (rawImage.startsWith('http://') || rawImage.startsWith('https://') || rawImage.startsWith('/'));
+
   const product = {
     id: rawProduct.id || rawProduct._id,
     name: rawProduct.name || rawProduct.nombre,
@@ -40,15 +61,12 @@ export default function HFProductDetail({ onNavigate, product: propProduct, onAd
     category: rawProduct.category || rawProduct.categoria,
     description: rawProduct.description || rawProduct.descripcion || 'Producto artesanal de alta calidad.',
     ingredients: rawProduct.ingredients || rawProduct.ingredientes,
-    image: rawProduct.image || rawProduct.imagen_url || rawProduct.imagen,
+    image: isValidImageUrl && !imageError ? rawImage : null,
     emoji: rawProduct.emoji || categoryEmojis[rawProduct.category || rawProduct.categoria] || categoryEmojis.default,
     available: rawProduct.available !== undefined ? rawProduct.available : (rawProduct.disponible !== undefined ? rawProduct.disponible : true),
-    rating: rawProduct.rating || rawProduct.calificacion || 4.5,
-    reviews: rawProduct.reviews || rawProduct.resenas || 0,
     stock: rawProduct.stock || 100
   };
 
-  const images = product.image ? [product.image] : [product.emoji, product.emoji, product.emoji, product.emoji];
   const hasRealImage = !!product.image;
 
   const handleAddToCart = () => {
@@ -89,8 +107,8 @@ export default function HFProductDetail({ onNavigate, product: propProduct, onAd
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 'var(--space-10)'
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+          gap: isMobile ? 'var(--space-6)' : 'var(--space-10)'
         }}>
           {/* Product Images */}
           <div>
@@ -98,36 +116,37 @@ export default function HFProductDetail({ onNavigate, product: propProduct, onAd
             <div style={{
               background: 'white',
               borderRadius: 'var(--radius-2xl)',
-              padding: 'var(--space-8)',
+              padding: 'var(--space-6)',
               border: '1px solid var(--color-neutral-300)',
-              marginBottom: 'var(--space-4)',
               aspectRatio: '1/1',
+              maxHeight: isMobile ? '350px' : '500px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: hasRealImage ? 'inherit' : '180px',
+              fontSize: hasRealImage ? 'inherit' : '120px',
               position: 'relative',
               overflow: 'hidden'
             }}>
               {hasRealImage ? (
-                <img 
-                  src={images[selectedImage]} 
+                <img
+                  src={product.image}
                   alt={product.name}
                   style={{
                     maxWidth: '100%',
                     maxHeight: '100%',
                     objectFit: 'contain'
                   }}
+                  onError={() => setImageError(true)}
                 />
               ) : (
-                images[selectedImage]
+                <span>{product.emoji}</span>
               )}
               <button style={{
                 position: 'absolute',
-                top: 'var(--space-5)',
-                right: 'var(--space-5)',
-                width: '48px',
-                height: '48px',
+                top: 'var(--space-4)',
+                right: 'var(--space-4)',
+                width: '44px',
+                height: '44px',
                 borderRadius: 'var(--radius-full)',
                 background: 'white',
                 border: '1px solid var(--color-neutral-300)',
@@ -152,46 +171,6 @@ export default function HFProductDetail({ onNavigate, product: propProduct, onAd
               >
                 <Heart size={20} />
               </button>
-            </div>
-
-            {/* Thumbnails */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: 'var(--space-3)'
-            }}>
-              {images.map((img, i) => (
-                <div
-                  key={i}
-                  onClick={() => setSelectedImage(i)}
-                  style={{
-                    aspectRatio: '1/1',
-                    background: 'white',
-                    borderRadius: 'var(--radius-lg)',
-                    border: selectedImage === i 
-                      ? '2px solid var(--color-primary)' 
-                      : '1px solid var(--color-neutral-300)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '48px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedImage !== i) {
-                      e.currentTarget.style.borderColor = 'var(--color-primary)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedImage !== i) {
-                      e.currentTarget.style.borderColor = 'var(--color-neutral-300)';
-                    }
-                  }}
-                >
-                  {img}
-                </div>
-              ))}
             </div>
           </div>
 
@@ -220,30 +199,16 @@ export default function HFProductDetail({ onNavigate, product: propProduct, onAd
               {product.name}
             </h1>
 
-            {/* Rating */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-3)',
-              marginBottom: 'var(--space-5)'
-            }}>
-              <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
-                {[1, 2, 3, 4, 5].map(i => (
-                  <Star
-                    key={i}
-                    size={20}
-                    fill={i <= 4 ? 'var(--color-new)' : 'none'}
-                    stroke={i <= 4 ? 'var(--color-new)' : 'var(--color-neutral-300)'}
-                  />
-                ))}
-              </div>
-              <span style={{
-                fontSize: 'var(--font-size-body-s)',
-                color: 'var(--color-neutral-700)'
+            {/* Categoría */}
+            {product.category && (
+              <div style={{
+                fontSize: 'var(--font-size-body-m)',
+                color: 'var(--color-neutral-600)',
+                marginBottom: 'var(--space-5)'
               }}>
-                {product.rating} ({product.reviews} reseñas)
-              </span>
-            </div>
+                Categoría: {product.category}
+              </div>
+            )}
 
             {/* Price */}
             <div style={{

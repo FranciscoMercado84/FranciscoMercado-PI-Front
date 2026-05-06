@@ -3,10 +3,10 @@ import { Plus, Search, Edit, Trash2, Eye, AlertTriangle } from 'lucide-react';
 
 // Datos mock por defecto
 const defaultProducts = [
-  { id: 1, name: 'Baguette Francesa', category: 'Pan', price: 3.50, stock: 24, stock_minimo: 10, status: 'available' },
-  { id: 2, name: 'Croissant Mantequilla', category: 'Pastelería', price: 2.80, stock: 0, stock_minimo: 10, status: 'sold-out' },
-  { id: 3, name: 'Pan Integral', category: 'Pan', price: 4.20, stock: 15, stock_minimo: 10, status: 'available' },
-  { id: 4, name: 'Bagel', category: 'Pan', price: 3.00, stock: 5, stock_minimo: 10, status: 'low-stock' },
+  { id: 1, name: 'Baguette Francesa', category: 'Panadería', price: 3.50, stock: 24, stock_minimo: 10, status: 'available' },
+  { id: 2, name: 'Croissant Mantequilla', category: 'Panadería', price: 2.80, stock: 0, stock_minimo: 10, status: 'sold-out' },
+  { id: 3, name: 'Pan Integral', category: 'Panadería', price: 4.20, stock: 15, stock_minimo: 10, status: 'available' },
+  { id: 4, name: 'Bagel', category: 'Panadería', price: 3.00, stock: 5, stock_minimo: 10, status: 'low-stock' },
 ];
 
 export default function HFAdminProducts({ products: propProducts, onNavigate, onDelete }) {

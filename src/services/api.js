@@ -191,6 +191,29 @@ export const productService = {
   },
 
   /**
+   * Obtener productos más vendidos
+   * @param {number} limit - Cantidad de productos a retornar
+   * @returns {Promise<{data: Array}>}
+   */
+  async getBestSellers(limit = 4) {
+    try {
+      // Intentar obtener del endpoint de más vendidos si existe
+      return await apiClient.get(`/productos/mas-vendidos?limit=${limit}`, { auth: false });
+    } catch (error) {
+      // Si no existe el endpoint, obtener todos y ordenar por ventas/stock
+      const allProducts = await this.getAll();
+      const products = Array.isArray(allProducts) ? allProducts : (allProducts.data || allProducts.productos || []);
+      // Ordenar por ventas_totales o stock bajo (indicador de alta demanda)
+      const sorted = [...products].sort((a, b) => {
+        const ventasA = a.ventas_totales || a.ventas || 0;
+        const ventasB = b.ventas_totales || b.ventas || 0;
+        return ventasB - ventasA;
+      });
+      return sorted.slice(0, limit);
+    }
+  },
+
+  /**
    * Obtener un producto por ID
    * @param {string} id - ID del producto
    * @returns {Promise<{data: object}>}
@@ -392,10 +415,187 @@ export const pedidoService = {
   async updateEstado(id, estado) {
     return await apiClient.put(`/pedidos/${id}/estado`, { estado });
   },
+
+  /**
+   * Obtener productos frecuentes del usuario basados en historial de pedidos
+   * @param {number} limit - Cantidad de productos a retornar
+   * @returns {Promise<Array>} - Array de productos con frecuencia
+   */
+  async getProductosFrecuentes(limit = 5) {
+    try {
+      const pedidos = await this.getMisPedidos();
+      const pedidosList = Array.isArray(pedidos) ? pedidos : (pedidos.data || pedidos.pedidos || []);
+
+      // Contar frecuencia de cada producto
+      const productosCount = {};
+      pedidosList.forEach(pedido => {
+        const items = pedido.items || pedido.productos || [];
+        items.forEach(item => {
+          const id = item.producto_id || item.productoId || item.producto?._id || item.producto?.id;
+          const nombre = item.nombre || item.producto?.nombre || item.name || item.producto?.name;
+          const precio = item.precio || item.producto?.precio || item.price || item.producto?.price;
+          const imagen = item.imagen || item.producto?.imagen_url || item.image || item.producto?.image;
+          const cantidad = item.cantidad || item.quantity || 1;
+
+          if (id) {
+            if (!productosCount[id]) {
+              productosCount[id] = {
+                id,
+                nombre,
+                precio,
+                imagen,
+                frecuencia: 0,
+                cantidadTotal: 0
+              };
+            }
+            productosCount[id].frecuencia += 1;
+            productosCount[id].cantidadTotal += cantidad;
+          }
+        });
+      });
+
+      // Ordenar por frecuencia y retornar los más pedidos
+      const sorted = Object.values(productosCount)
+        .sort((a, b) => b.frecuencia - a.frecuencia)
+        .slice(0, limit);
+
+      return sorted;
+    } catch (error) {
+      console.error('Error al obtener productos frecuentes:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Repetir un pedido anterior (añadir sus productos al carrito)
+   * @param {string} pedidoId - ID del pedido a repetir
+   * @returns {Promise<{success: boolean, itemsAdded: number}>}
+   */
+  async repetirPedido(pedidoId) {
+    const pedido = await this.getById(pedidoId);
+    const pedidoData = pedido.data || pedido;
+    const items = pedidoData.items || pedidoData.productos || [];
+
+    let itemsAdded = 0;
+    for (const item of items) {
+      const productoId = item.producto_id || item.productoId || item.producto?._id || item.producto?.id;
+      const cantidad = item.cantidad || item.quantity || 1;
+
+      if (productoId) {
+        try {
+          await carritoService.addItem(productoId, cantidad);
+          itemsAdded++;
+        } catch (error) {
+          console.error(`Error al añadir producto ${productoId}:`, error);
+        }
+      }
+    }
+
+    return { success: itemsAdded > 0, itemsAdded };
+  },
 };
 
 // Mantener compatibilidad con nombres anteriores
 export const cartService = carritoService;
 export const orderService = pedidoService;
+
+/**
+ * Servicio de reportes para el panel de administración
+ */
+export const reportService = {
+  /**
+   * Obtener estadísticas generales del dashboard
+   * @param {string} periodo - Periodo de tiempo ('7d', '30d', '3m', '1y')
+   * @returns {Promise<{ventas_totales: number, pedidos: number, clientes: number, ticket_promedio: number}>}
+   */
+  async getEstadisticas(periodo = '7d') {
+    try {
+      return await apiClient.get(`/reportes/estadisticas?periodo=${periodo}`);
+    } catch (error) {
+      console.error('Error al obtener estadísticas:', error);
+      // Retornar datos vacíos si el endpoint no existe
+      return {
+        ventas_totales: 0,
+        pedidos: 0,
+        clientes: 0,
+        ticket_promedio: 0,
+        cambio_ventas: '0%',
+        cambio_pedidos: '0%',
+        cambio_clientes: '0%',
+        cambio_ticket: '0%'
+      };
+    }
+  },
+
+  /**
+   * Obtener ventas por día
+   * @param {string} periodo - Periodo de tiempo
+   * @returns {Promise<Array<{dia: string, ventas: number}>>}
+   */
+  async getVentasPorDia(periodo = '7d') {
+    try {
+      return await apiClient.get(`/reportes/ventas-por-dia?periodo=${periodo}`);
+    } catch (error) {
+      console.error('Error al obtener ventas por día:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Obtener productos más vendidos
+   * @param {number} limit - Cantidad de productos a retornar
+   * @returns {Promise<Array<{nombre: string, ventas: number, ingresos: number}>>}
+   */
+  async getProductosMasVendidos(limit = 5) {
+    try {
+      return await apiClient.get(`/reportes/productos-mas-vendidos?limit=${limit}`);
+    } catch (error) {
+      console.error('Error al obtener productos más vendidos:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Obtener resumen de pedidos por estado
+   * @returns {Promise<{pendientes: number, en_proceso: number, completados: number, cancelados: number}>}
+   */
+  async getResumenPedidos() {
+    try {
+      return await apiClient.get('/reportes/resumen-pedidos');
+    } catch (error) {
+      console.error('Error al obtener resumen de pedidos:', error);
+      return { pendientes: 0, en_proceso: 0, completados: 0, cancelados: 0 };
+    }
+  },
+
+  /**
+   * Exportar reporte a CSV/Excel
+   * @param {string} tipo - Tipo de reporte ('ventas', 'pedidos', 'productos')
+   * @param {string} periodo - Periodo de tiempo
+   */
+  async exportarReporte(tipo, periodo = '7d') {
+    try {
+      const token = apiClient.getAuthToken();
+      const response = await fetch(`${apiClient.baseURL}/reportes/exportar?tipo=${tipo}&periodo=${periodo}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Error al exportar');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reporte-${tipo}-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error al exportar reporte:', error);
+      throw error;
+    }
+  }
+};
 
 export default apiClient;

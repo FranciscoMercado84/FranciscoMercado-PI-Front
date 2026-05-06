@@ -4,12 +4,14 @@ import HFProductCatalog from '../../../components/design-system/high-fidelity/HF
 import { LoadingState } from '../../components/states/LoadingState';
 import { ErrorState } from '../../components/states/ErrorState';
 import { EmptyState } from '../../components/states/EmptyState';
-import { productService, carritoService } from '../../services/api';
+import { productService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 
 export const CatalogPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { addItem } = useCart();
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,9 +47,9 @@ export const CatalogPage = () => {
       navigate('/login');
       return;
     }
-    
+
     try {
-      await carritoService.addItem(productId, 1);
+      await addItem(productId, 1);
       // Buscar nombre del producto para el toast
       const product = products.find(p => (p.id || p._id) === productId);
       const productName = product?.nombre || product?.name || 'Producto';

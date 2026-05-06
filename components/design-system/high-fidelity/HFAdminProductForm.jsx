@@ -60,8 +60,16 @@ export default function HFAdminProductForm({ product, onNavigate, onSubmit, isPr
     });
   };
 
-  // Categorías por defecto si no se proporcionan
-  const categoryOptions = categories.length > 0 ? categories : ['Pan', 'Pastelería', 'Especiales', 'Bebidas'];
+  // Categorías por defecto si no se proporcionan (sincronizadas con backend)
+  const categoryOptions = categories.length > 0 ? categories : [
+    'Despensa y básicos',
+    'Conservas y Enlatados',
+    'Aceites, Vinagres y Salsas',
+    'Bebidas y Bodega',
+    'Charcutería',
+    'Dulces',
+    'Panadería'
+  ];
 
   return (
     <div style={{

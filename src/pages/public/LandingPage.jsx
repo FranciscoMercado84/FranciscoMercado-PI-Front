@@ -1,46 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 import HFHeader from '../../../components/design-system/high-fidelity/HFHeader';
 import HFLanding from '../../../components/design-system/high-fidelity/HFLanding';
-import HFFooter from '../../../components/design-system/high-fidelity/HFFooter';
-import { productService, carritoService } from '../../services/api';
+import { productService } from '../../services/api';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout, isAuthenticated } = useAuth();
+  const { cartCount, addItem } = useCart();
   const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [cartCount, setCartCount] = useState(0);
   const [toast, setToast] = useState(null);
 
-  // Cargar carrito para obtener el conteo
+  // Procesar hash de la URL para scroll a sección
   useEffect(() => {
-    const loadCartCount = async () => {
-      if (isAuthenticated) {
-        try {
-          const cart = await carritoService.get();
-          const items = cart.items || cart.productos || [];
-          const count = items.reduce((sum, item) => sum + (item.cantidad || item.quantity || 1), 0);
-          setCartCount(count);
-        } catch (err) {
-          console.error('Error al cargar carrito:', err);
+    const hash = location.hash.replace('#', '');
+    if (hash === 'about' || hash === 'contact') {
+      setTimeout(() => {
+        const element = document.getElementById(hash);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      }
-    };
-    loadCartCount();
-  }, [isAuthenticated]);
+      }, 300);
+    }
+  }, [location.hash]);
 
   useEffect(() => {
     const loadFeaturedProducts = async () => {
       try {
-        const response = await productService.getAll();
-        const products = Array.isArray(response) ? response : (response.data || response.productos || []);
-        
-        // Mezclar productos aleatoriamente y tomar 4 para rotación
-        const shuffled = [...products].sort(() => Math.random() - 0.5);
-        setFeaturedProducts(shuffled.slice(0, 4));
+        // Intentar obtener los productos más vendidos
+        const bestSellers = await productService.getBestSellers(4);
+        const products = Array.isArray(bestSellers) ? bestSellers : (bestSellers.data || bestSellers.productos || []);
+
+        if (products.length > 0) {
+          setFeaturedProducts(products);
+        } else {
+          // Si no hay datos de ventas, obtener todos y mostrar algunos
+          const response = await productService.getAll();
+          const allProducts = Array.isArray(response) ? response : (response.data || response.productos || []);
+          setFeaturedProducts(allProducts.slice(0, 4));
+        }
       } catch (err) {
         console.error('Error al cargar productos destacados:', err);
+        // Fallback: cargar productos normales
+        try {
+          const response = await productService.getAll();
+          const products = Array.isArray(response) ? response : (response.data || response.productos || []);
+          setFeaturedProducts(products.slice(0, 4));
+        } catch (fallbackErr) {
+          console.error('Error en fallback:', fallbackErr);
+        }
       }
     };
 
@@ -55,17 +66,16 @@ export const LandingPage = () => {
 
     try {
       const productId = product.id || product._id;
-      await carritoService.addItem(productId, 1);
-      
-      // Actualizar contador del carrito
-      setCartCount(prev => prev + 1);
-      
+      await addItem(productId, 1);
+
       // Mostrar notificación de éxito
       const productName = product.name || product.nombre || 'Producto';
       setToast({ message: `${productName} añadido al carrito`, type: 'success' });
       setTimeout(() => setToast(null), 3000);
     } catch (err) {
       console.error('Error al agregar al carrito:', err);
+      setToast({ message: 'Error al agregar al carrito', type: 'error' });
+      setTimeout(() => setToast(null), 3000);
     }
   };
 
@@ -83,15 +93,25 @@ export const LandingPage = () => {
       'profile': '/profile',
       'landing': '/',
       'admin-login': '/admin/login',
-      'contact': 'footer'
+      'contact': 'scroll-contact',
+      'about': 'scroll-about'
     };
     
     const route = routes[screenId];
-    if (route === 'footer') {
-      const footer = document.querySelector('footer');
-      if (footer) {
-        footer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+    if (route === 'scroll-contact') {
+      setTimeout(() => {
+        const contact = document.getElementById('contact');
+        if (contact) {
+          contact.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 80);
+    } else if (route === 'scroll-about') {
+      setTimeout(() => {
+        const about = document.getElementById('about');
+        if (about) {
+          about.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 80);
     } else if (route) {
       navigate(route);
     }
