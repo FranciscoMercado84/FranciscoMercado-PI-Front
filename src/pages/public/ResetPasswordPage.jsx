@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { authService } from '../../services/api';
 import HFResetPassword from '../../../components/design-system/high-fidelity/HFResetPassword';
 
 export const ResetPasswordPage = () => {
   const navigate = useNavigate();
+  const { token: routeToken } = useParams();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const token = routeToken || searchParams.get('token');
   const [tokenChecking, setTokenChecking] = useState(Boolean(token));
   const [tokenError, setTokenError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);

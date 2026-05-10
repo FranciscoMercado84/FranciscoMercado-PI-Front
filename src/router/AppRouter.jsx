@@ -52,6 +52,7 @@ export const AppRouter = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/recover" element={<RecoverPage />} />
+            <Route path="/reset/:token" element={<ResetPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/privacidad" element={<LegalPage type="privacy" />} />
             <Route path="/terminos" element={<LegalPage type="terms" />} />
