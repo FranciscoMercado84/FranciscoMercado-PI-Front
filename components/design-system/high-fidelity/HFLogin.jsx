@@ -9,11 +9,12 @@ if (typeof document !== 'undefined') {
 export default function HFLogin({ onNavigate, onLogin, isLoading = false, error = null }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
 
   const handleSubmit = (e) => {
     e?.preventDefault();
     if (onLogin) {
-      onLogin(email, password);
+      onLogin(email, password, rememberMe);
     }
   };
   return (
@@ -182,7 +183,13 @@ export default function HFLogin({ onNavigate, onLogin, isLoading = false, error 
               fontSize: 'var(--font-size-body-s)',
               cursor: 'pointer'
             }}>
-              <input type="checkbox" style={{ cursor: 'pointer' }} />
+              <input
+                type="checkbox"
+                style={{ cursor: 'pointer' }}
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                aria-label="Recordarme"
+              />
               <span>Recordarme</span>
             </label>
             <a

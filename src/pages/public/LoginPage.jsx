@@ -10,7 +10,7 @@ export const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleLogin = async (email, password) => {
+  const handleLogin = async (email, password, remember = true) => {
     if (!email || !password) {
       setError('Por favor, ingresa tu email y contraseña');
       return;
@@ -20,7 +20,7 @@ export const LoginPage = () => {
     setError(null);
     
     try {
-      await login(email, password);
+      await login(email, password, remember);
       
       // Redirigir a la página desde donde vino o al catálogo
       const from = location.state?.from?.pathname || '/catalog';

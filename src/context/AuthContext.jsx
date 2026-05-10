@@ -9,7 +9,13 @@ export const AuthProvider = ({ children }) => {
 
   const clearSession = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    try {
+      // Borrar ambos storages para asegurar que la sesión quede limpia
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
+    } catch (err) {
+      console.warn('⚠️ [AuthContext] Error limpiando storage al cerrar sesión:', err);
+    }
   };
 
   const normalizeUser = (response) => {
@@ -31,7 +37,7 @@ export const AuthProvider = ({ children }) => {
     };
   };
 
-  const login = async (email, password) => {
+  const login = async (email, password, remember = true) => {
     try {
       // Llamada real a la API del backend
       const response = await authService.login(email, password);
@@ -51,7 +57,19 @@ export const AuthProvider = ({ children }) => {
       console.log('✅ [AuthContext] isAdmin será:', userData.role === 'admin');
       
       setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
+      // Guardar en localStorage si el usuario marca "Recordarme",
+      // si no, usar sessionStorage para que la sesión expire al cerrar la pestaña.
+      try {
+        if (remember) {
+          localStorage.setItem('user', JSON.stringify(userData));
+          sessionStorage.removeItem('user');
+        } else {
+          sessionStorage.setItem('user', JSON.stringify(userData));
+          localStorage.removeItem('user');
+        }
+      } catch (err) {
+        console.warn('No se pudo persistir sesión en el almacenamiento local:', err);
+      }
       
       return { success: true };
     } catch (error) {
@@ -93,8 +111,11 @@ export const AuthProvider = ({ children }) => {
     };
 
     const restoreSession = async () => {
-      const storedUser = localStorage.getItem('user');
-      console.log('🔄 [AuthContext] Restaurando sesión del localStorage:', storedUser);
+      // Revisar primero localStorage (persistente). Si no existe, revisar sessionStorage.
+      const fromLocal = localStorage.getItem('user');
+      const fromSession = sessionStorage.getItem('user');
+      const storedUser = fromLocal || fromSession;
+      console.log('🔄 [AuthContext] Restaurando sesión. localStorage:', !!fromLocal, 'sessionStorage:', !!fromSession);
 
       if (storedUser) {
         try {
@@ -103,11 +124,11 @@ export const AuthProvider = ({ children }) => {
           console.log('✅ [AuthContext] isAdmin será:', parsedUser.role === 'admin');
           await validateStoredSession(parsedUser);
         } catch (error) {
-          console.error('❌ [AuthContext] Error al parsear usuario del localStorage:', error);
+          console.error('❌ [AuthContext] Error al parsear usuario del storage:', error);
           clearSession();
         }
       } else {
-        console.log('ℹ️ [AuthContext] No hay usuario en localStorage');
+        console.log('ℹ️ [AuthContext] No hay usuario en storage');
       }
 
       setIsLoading(false);
