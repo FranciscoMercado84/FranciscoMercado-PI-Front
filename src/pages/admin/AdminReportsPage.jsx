@@ -26,8 +26,19 @@ export const AdminReportsPage = () => {
         reportService.getProductosMasVendidos(5)
       ]);
 
-      setEstadisticas(stats.data || stats);
-      setVentasPorDia(Array.isArray(ventas) ? ventas : (ventas.data || []));
+      // Mapear respuesta de backend a la forma esperada por HFReports
+      const rawStats = stats.data || stats || {};
+      const mappedStats = {
+        ventas_totales: rawStats.ventas_total ?? rawStats.ventas_totales ?? 0,
+        pedidos: rawStats.pedidos_count ?? rawStats.pedidos ?? 0,
+        clientes: rawStats.clientes_unicos ?? rawStats.clientes ?? 0,
+        ticket_promedio: rawStats.ticket_promedio ?? rawStats.promedio_ticket ?? 0,
+        cambio_ventas: rawStats.comparativa ? `${(rawStats.comparativa.diferencia_pct ?? 0).toFixed(2)}%` : '+0%'
+      };
+      setEstadisticas(mappedStats);
+      // Normalizar la estructura de ventasPorDia para aceptar distintos formatos
+      const rawVentas = Array.isArray(ventas) ? ventas : (ventas.data || ventas || []);
+      setVentasPorDia(normalizeVentasPorDia(rawVentas));
       setProductosMasVendidos(Array.isArray(productos) ? productos : (productos.data || []));
     } catch (err) {
       console.error('Error al cargar reportes:', err);
@@ -172,23 +183,73 @@ function calcularEstadisticasDesdeRedidos(pedidos, periodo) {
   };
 }
 
-function calcularVentasPorDia(pedidos, periodo) {
-  const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
-  const ventasPorDia = {};
+// Normaliza distintos formatos de respuesta de ventas por día a nuestro formato L-M-X-J-V-S-D
+function normalizeVentasPorDia(rawVentas = []) {
+  const mapNames = {
+    'lunes': 'L','martes':'M','miercoles':'X','miércoles':'X','jueves':'J','viernes':'V','sabado':'S','sábado':'S','domingo':'D',
+    'mon':'L','tue':'M','wed':'X','thu':'J','fri':'V','sat':'S','sun':'D',
+    'l':'L','m':'M','x':'X','j':'J','v':'V','s':'S','d':'D'
+  };
+  const acumulado = { L: 0, M: 0, X: 0, J: 0, V: 0, S: 0, D: 0 };
 
-  // Inicializar todos los días
-  diasSemana.forEach(dia => { ventasPorDia[dia] = 0; });
+  rawVentas.forEach(item => {
+    let dayKey = null;
+    // posibles campos: dia, day, fecha, date
+    if (item.dia !== undefined) dayKey = String(item.dia);
+    else if (item.day !== undefined) dayKey = String(item.day);
+    else if (item.fecha || item.date) {
+      // Forzar parseo en UTC para evitar desfases por zona horaria
+      const dateStr = (item.fecha || item.date);
+      const d = new Date(dateStr.length === 10 ? `${dateStr}T00:00:00Z` : dateStr);
+      if (!isNaN(d.getTime())) {
+        const mapping = ['D','L','M','X','J','V','S'];
+        dayKey = mapping[d.getDay()];
+      }
+    }
 
-  // Sumar ventas por día de la semana
-  pedidos.forEach(pedido => {
-    const fecha = new Date(pedido.fecha || pedido.createdAt || pedido.created_at);
-    const diaSemana = diasSemana[fecha.getDay()];
-    ventasPorDia[diaSemana] += pedido.total || 0;
+    if (dayKey !== null) {
+      // si es numérico (0-6)
+      const asNum = Number(dayKey);
+      if (!isNaN(asNum)) {
+        const mapping = ['D','L','M','X','J','V','S'];
+        dayKey = mapping[asNum];
+      } else {
+        const lower = dayKey.toLowerCase();
+        dayKey = mapNames[lower] || (lower.charAt(0) || '').toUpperCase();
+      }
+    }
+
+    const ventas = Number(item.ventas ?? item.total ?? item.amount ?? item.value ?? 0);
+    if (dayKey && acumulado[dayKey] !== undefined) acumulado[dayKey] += ventas;
   });
 
-  // Convertir a array ordenado (L-D)
+  const orden = ['L','M','X','J','V','S','D'];
+  return orden.map(d => ({ dia: d, ventas: Number((acumulado[d] || 0).toFixed(2)) }));
+}
+
+function calcularVentasPorDia(pedidos, periodo) {
+  // Determinar rango en días según periodo
+  const daysCount = periodo === '7d' ? 7 : periodo === '30d' ? 30 : periodo === '3m' ? 90 : 365;
+  const now = new Date();
+  const startDate = new Date(now.getTime() - (daysCount - 1) * 24 * 60 * 60 * 1000);
+
+  // Inicializar suma por día de la semana
+  const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+  const ventasPorDia = { D: 0, L: 0, M: 0, X: 0, J: 0, V: 0, S: 0 };
+
+  // Procesar pedidos y sumar ventas si están dentro del rango
+  pedidos.forEach(pedido => {
+    const raw = pedido.fecha || pedido.createdAt || pedido.created_at || pedido.date;
+    const fecha = raw ? new Date(raw) : null;
+    if (!fecha || isNaN(fecha.getTime())) return; // ignorar fechas inválidas
+    if (fecha < startDate || fecha > now) return; // fuera del periodo
+    const diaSemana = diasSemana[fecha.getDay()];
+    ventasPorDia[diaSemana] += Number(pedido.total || 0);
+  });
+
+  // Orden deseada: L-M-X-J-V-S-D
   const orden = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-  return orden.map(dia => ({ dia, ventas: ventasPorDia[dia] }));
+  return orden.map(dia => ({ dia, ventas: Number((ventasPorDia[dia] || 0).toFixed(2)) }));
 }
 
 async function calcularProductosMasVendidos(pedidos) {

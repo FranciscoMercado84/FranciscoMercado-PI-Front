@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HFAdminDashboard from '../../../components/design-system/high-fidelity/HFAdminDashboard';
 import { LoadingState } from '../../components/states/LoadingState';
+import { ErrorState } from '../../components/states/ErrorState';
 import { productService, pedidoService } from '../../services/api';
 
 export const AdminDashboardPage = () => {
@@ -10,15 +11,15 @@ export const AdminDashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
         setIsLoading(true);
-        
         // Cargar productos, pedidos y productos con stock bajo en paralelo
         const [productsRes, ordersRes, lowStockRes] = await Promise.all([
-          productService.getAll(),
+          productService.getAllAdmin(),
           pedidoService.getAllPedidos(),
           productService.getStockBajo().catch(() => ({ data: [] })) // Si falla, array vacío
         ]);
@@ -66,15 +67,9 @@ export const AdminDashboardPage = () => {
         setLowStockProducts(lowStock.slice(0, 5)); // Top 5 productos con stock bajo
       } catch (err) {
         console.error('Error al cargar datos del dashboard:', err);
-        // Usar valores por defecto si hay error
-        setStats({
-          salesToday: 0,
-          pendingOrders: 0,
-          activeCustomers: 0,
-          totalProducts: 0,
-          lowStockCount: 0,
-          outOfStockCount: 0
-        });
+        // Mostrar el error al usuario en lugar de usar datos por defecto, para facilitar debug
+        setError(err.message || 'Error al cargar datos del dashboard');
+        setStats(null);
         setRecentOrders([]);
         setLowStockProducts([]);
       } finally {
@@ -105,6 +100,16 @@ export const AdminDashboardPage = () => {
 
   if (isLoading) {
     return <LoadingState message="Cargando dashboard..." />;
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Error al cargar dashboard"
+        message={error}
+        onRetry={() => window.location.reload()}
+      />
+    );
   }
 
   return (

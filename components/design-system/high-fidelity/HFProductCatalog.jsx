@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import HFFooter from './HFFooter';
 import { Search, SlidersHorizontal, Grid, List } from 'lucide-react';
 
@@ -31,25 +31,70 @@ const categoryEmojis = {
   'default': '🥯'
 };
 
-export default function HFProductCatalog({ onNavigate, products: propProducts, onAddToCart }) {
+export default function HFProductCatalog({
+  onNavigate,
+  products: propProducts,
+  onAddToCart,
+  categories = [],
+  searchTerm = '',
+  selectedCategory = '',
+  sortOption = '',
+  filtersOpen = false,
+  onSearchChange,
+  onCategoryChange,
+  onSortChange,
+  onToggleFilters,
+  onResetFilters
+}) {
   const [viewMode, setViewMode] = useState('grid');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
 
   // Usar productos de props o los por defecto
   const products = propProducts && propProducts.length > 0 ? propProducts : defaultProducts;
 
-  // Obtener categorías únicas de los productos
-  const categories = [...new Set(products.map(p => p.category || p.categoria))].filter(Boolean);
+  const categoryOptions = useMemo(() => {
+    const baseCategories = products
+      .map((product) => product.category || product.categoria)
+      .filter(Boolean);
 
-  // Filtrar productos
-  const filteredProducts = products.filter(product => {
-    const name = product.name || product.nombre || '';
-    const category = product.category || product.categoria || '';
-    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+    return Array.from(new Set([...categories, ...baseCategories, selectedCategory].filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b, 'es'));
+  }, [categories, products, selectedCategory]);
+
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    const filtered = products.filter((product) => {
+      const name = (product.name || product.nombre || '').toLowerCase();
+      const category = product.category || product.categoria || '';
+      const matchesSearch = !normalizedSearch || name.includes(normalizedSearch);
+      const matchesCategory = !selectedCategory || category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+
+    if (!sortOption) {
+      return filtered;
+    }
+
+    const sorted = [...filtered];
+
+    if (sortOption === 'precio') {
+      return sorted.sort((a, b) => (a.price || a.precio || 0) - (b.price || b.precio || 0));
+    }
+
+    if (sortOption === 'mas-vendidos') {
+      return sorted.sort((a, b) => (b.ventas_totales || b.ventas || 0) - (a.ventas_totales || a.ventas || 0));
+    }
+
+    if (sortOption === 'nuevos') {
+      return sorted.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.fecha_creacion || 0).getTime();
+        const dateB = new Date(b.createdAt || b.fecha_creacion || 0).getTime();
+        return dateB - dateA;
+      });
+    }
+
+    return filtered;
+  }, [products, searchTerm, selectedCategory, sortOption]);
 
   // Helper para obtener el emoji del producto
   const getProductEmoji = (product) => {
@@ -131,7 +176,7 @@ export default function HFProductCatalog({ onNavigate, products: propProducts, o
               type="text"
               placeholder="Buscar productos..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => onSearchChange?.(e.target.value)}
               style={{
                 width: '100%',
                 padding: 'var(--space-3) var(--space-3) var(--space-3) var(--space-10)',
@@ -156,7 +201,7 @@ export default function HFProductCatalog({ onNavigate, products: propProducts, o
           {/* Category Filter */}
           <select 
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => onCategoryChange?.(e.target.value)}
             style={{
               padding: 'var(--space-3) var(--space-4)',
               border: '1px solid var(--color-neutral-300)',
@@ -169,13 +214,17 @@ export default function HFProductCatalog({ onNavigate, products: propProducts, o
             }}
           >
             <option value="">Todas las Categorías</option>
-            {categories.map(cat => (
+            {categoryOptions.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
 
           {/* Filter Button */}
-          <button style={{
+          <button
+            type="button"
+            onClick={() => onToggleFilters?.()}
+            aria-pressed={filtersOpen}
+            style={{
             padding: 'var(--space-3) var(--space-5)',
             background: 'white',
             border: '1px solid var(--color-neutral-300)',
@@ -192,7 +241,7 @@ export default function HFProductCatalog({ onNavigate, products: propProducts, o
           onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--color-neutral-300)'}
           >
             <SlidersHorizontal size={18} />
-            Filtros
+            {filtersOpen ? 'Ocultar filtros' : 'Filtros'}
           </button>
 
           {/* View Toggle */}
@@ -228,6 +277,155 @@ export default function HFProductCatalog({ onNavigate, products: propProducts, o
             ))}
           </div>
         </div>
+
+        {filtersOpen && (
+          <div style={{
+            background: 'white',
+            padding: 'var(--space-5)',
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid var(--color-neutral-300)',
+            marginBottom: 'var(--space-6)',
+            boxShadow: 'var(--shadow-low)'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 'var(--space-4)',
+              marginBottom: 'var(--space-4)',
+              flexWrap: 'wrap'
+            }}>
+              <div>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: 'var(--font-size-body-l)',
+                  fontWeight: 'var(--font-weight-semibold)',
+                  color: 'var(--color-neutral-900)'
+                }}>
+                  Ordenación y filtros
+                </h3>
+                <p style={{
+                  margin: 'var(--space-1) 0 0',
+                  fontSize: 'var(--font-size-body-s)',
+                  color: 'var(--color-neutral-700)'
+                }}>
+                  Ajusta el catálogo con una búsqueda rápida y el orden que prefieras.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onResetFilters?.()}
+                style={{
+                  padding: 'var(--space-3) var(--space-5)',
+                  background: 'var(--color-neutral-50)',
+                  border: '1px solid var(--color-neutral-300)',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-body-m)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Limpiar filtros
+              </button>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr) minmax(260px, 320px) auto',
+              gap: 'var(--space-4)',
+              alignItems: 'end'
+            }}>
+              <div style={{ minWidth: 0 }}>
+              <label style={{
+                display: 'block',
+                fontSize: 'var(--font-size-body-s)',
+                fontWeight: 'var(--font-weight-medium)',
+                color: 'var(--color-neutral-700)',
+                marginBottom: 'var(--space-2)'
+              }}>
+                Ordenar por
+              </label>
+              <select
+                value={sortOption}
+                onChange={(e) => onSortChange?.(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: 'var(--space-3) var(--space-4)',
+                  border: '1px solid var(--color-neutral-300)',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-body-m)',
+                  background: 'white',
+                  cursor: 'pointer',
+                  fontWeight: 'var(--font-weight-medium)',
+                  color: 'var(--color-neutral-900)'
+                }}
+              >
+                <option value="">Sin ordenar</option>
+                <option value="mas-vendidos">Más vendidos</option>
+                <option value="precio">Precio</option>
+                <option value="nuevos">Nuevos</option>
+              </select>
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: 'var(--font-size-body-s)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  color: 'var(--color-neutral-700)',
+                  marginBottom: 'var(--space-2)'
+                }}>
+                  Categoría activa
+                </label>
+                <div style={{
+                  minHeight: '48px',
+                  padding: '0 var(--space-4)',
+                  borderRadius: 'var(--radius-lg)',
+                  border: '1px solid var(--color-neutral-200)',
+                  background: 'var(--color-neutral-50)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'var(--color-neutral-700)',
+                  fontSize: 'var(--font-size-body-m)'
+                }}>
+                  {selectedCategory || 'Todas las categorías'}
+                </div>
+              </div>
+
+              <div style={{ minWidth: '140px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: 'var(--font-size-body-s)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  color: 'var(--color-neutral-700)',
+                  marginBottom: 'var(--space-2)',
+                  opacity: 0
+                }}>
+                  Acciones
+                </label>
+                <button
+                  type="button"
+                  onClick={() => onToggleFilters?.()}
+                  style={{
+                    width: '100%',
+                    minHeight: '48px',
+                    padding: '0 var(--space-4)',
+                    background: 'white',
+                    border: '1px solid var(--color-neutral-300)',
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: 'var(--font-size-body-m)',
+                    fontWeight: 'var(--font-weight-medium)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Ocultar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Products Grid */}
         <div style={{

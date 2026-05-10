@@ -1,16 +1,55 @@
-import React from 'react';
-import { Facebook, Instagram, Mail, Phone, MapPin } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Mail, Phone, MapPin } from 'lucide-react';
+import { configService } from '../../../src/services/api';
+
+const defaultConfig = {
+  contactPhone: '+34 911 284 763',
+  contactEmail: 'admin@panaderia.com',
+  hours: {
+    weekday: {
+      morningOpen: '07:00',
+      morningClose: '14:30',
+      afternoonOpen: '17:30',
+      afternoonClose: '20:30'
+    },
+    saturday: { open: '07:00', close: '14:30' },
+    sunday: { open: '07:00', close: '14:30' }
+  }
+};
 
 export default function HFFooter({ onNavigate }) {
+  const [config, setConfig] = useState(defaultConfig);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadConfig = async () => {
+      try {
+        const response = await configService.get();
+        const data = response?.data || response || {};
+        if (active && data) {
+          setConfig(prev => ({ ...prev, ...data, hours: { ...prev.hours, ...(data.hours || {}) } }));
+        }
+      } catch (error) {
+        console.error('Error al cargar configuración pública:', error);
+      }
+    };
+
+    loadConfig();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const weekdayHours = config.hours?.weekday || defaultConfig.hours.weekday;
+  const saturdayHours = config.hours?.saturday || defaultConfig.hours.saturday;
+  const sundayHours = config.hours?.sunday || defaultConfig.hours.sunday;
+
   const handleLinkClick = (e, route) => {
     e.preventDefault();
     if (route) {
       onNavigate?.(route);
-    } else {
-      // Enlaces sin destino van a 404
-      if (typeof window !== 'undefined') {
-        window.location.href = '/404';
-      }
     }
   };
 
@@ -92,36 +131,6 @@ export default function HFFooter({ onNavigate }) {
             }}>
               Pan recién horneado y productos de alimentación básica. Tradición, cercanía y confianza en tu barrio.
             </p>
-            <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
-              {[Facebook, Instagram, Mail].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'rgba(250, 248, 246, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-neutral-100)',
-                    transition: 'all 0.2s',
-                    textDecoration: 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--color-primary)';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(250, 248, 246, 0.1)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  <Icon size={18} />
-                </a>
-              ))}
-            </div>
           </div>
 
           {/* Quick Links */}
@@ -138,9 +147,8 @@ export default function HFFooter({ onNavigate }) {
               {[
                 { label: 'Inicio', route: 'landing' },
                 { label: 'Productos', route: 'catalog' },
-                { label: 'Sobre Nosotros', route: null },
-                { label: 'Blog', route: null },
-                { label: 'Contacto', route: null }
+                { label: 'Sobre Nosotros', route: 'about' },
+                { label: 'Contacto', route: 'contact' }
               ].map(link => (
                 <li key={link.label} style={{ marginBottom: 'var(--space-2)' }}>
                   <a
@@ -177,19 +185,19 @@ export default function HFFooter({ onNavigate }) {
               <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'start' }}>
                 <MapPin size={18} style={{ color: 'var(--color-primary)', marginTop: '2px', flexShrink: 0 }} />
                 <span style={{ fontSize: 'var(--font-size-body-s)', color: 'var(--color-neutral-300)' }}>
-                  Av. Central, San José<br />Costa Rica
+                  Avenida de las Ciencias, 49<br />Madrid
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
                 <Phone size={18} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
                 <span style={{ fontSize: 'var(--font-size-body-s)', color: 'var(--color-neutral-300)' }}>
-                  +506 2222-2222
+                  {config.contactPhone}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
                 <Mail size={18} style={{ color: 'var(--color-primary)', flexShrink: 0 }} />
                 <span style={{ fontSize: 'var(--font-size-body-s)', color: 'var(--color-neutral-300)' }}>
-                  admin@panaderia.com
+                  {config.contactEmail}
                 </span>
               </div>
             </div>
@@ -207,9 +215,9 @@ export default function HFFooter({ onNavigate }) {
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
               {[
-                { day: 'Lun - Vie', hours: '7:00 - 14:30 y 17:30 - 20:30' },
-                { day: 'Sábado', hours: '7:00 - 14:30' },
-                { day: 'Domingo', hours: '7:00 - 14:30' }
+                { day: 'Lun - Vie', hours: `${weekdayHours.morningOpen} - ${weekdayHours.morningClose} y ${weekdayHours.afternoonOpen} - ${weekdayHours.afternoonClose}` },
+                { day: 'Sábado', hours: `${saturdayHours.open} - ${saturdayHours.close}` },
+                { day: 'Domingo', hours: `${sundayHours.open} - ${sundayHours.close}` }
               ].map(item => (
                 <div key={item.day} style={{
                   display: 'flex',
@@ -241,11 +249,15 @@ export default function HFFooter({ onNavigate }) {
             © 2026 Panadería Puri. Todos los derechos reservados.
           </p>
           <div style={{ display: 'flex', gap: 'var(--space-5)' }}>
-            {['Privacidad', 'Términos', 'Cookies'].map(link => (
+            {[
+              { label: 'Privacidad', route: 'privacy' },
+              { label: 'Términos', route: 'terms' },
+              { label: 'Cookies', route: 'cookies' }
+            ].map(link => (
               <a
-                key={link}
+                key={link.label}
                 href="#"
-                onClick={(e) => handleLinkClick(e, null)}
+                onClick={(e) => handleLinkClick(e, link.route)}
                 style={{
                   fontSize: 'var(--font-size-body-s)',
                   color: 'var(--color-neutral-500)',
@@ -256,7 +268,7 @@ export default function HFFooter({ onNavigate }) {
                 onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
                 onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-neutral-500)'}
               >
-                {link}
+                {link.label}
               </a>
             ))}
           </div>

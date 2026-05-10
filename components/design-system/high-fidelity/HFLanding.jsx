@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import HFFooter from './HFFooter';
 import { ArrowRight, Star, Clock, MapPin, Users, Heart, Send, Phone, Mail } from 'lucide-react';
+import { configService } from '../../../src/services/api';
+
+const defaultConfig = {
+  contactPhone: '+34 911 284 763',
+  contactEmail: 'admin@panaderia.com',
+  hours: {
+    weekday: {
+      morningOpen: '07:00',
+      morningClose: '14:30',
+      afternoonOpen: '17:30',
+      afternoonClose: '20:30'
+    }
+  }
+};
 
 const defaultFeaturedProducts = [
-  { id: 1, name: 'Pan del Dia', description: 'Recien horneado en tienda, caliente y crujiente', price: 1.2, emoji: '🥖' },
-  { id: 2, name: 'Bolleria Variada', description: 'Croissants, magdalenas y dulces artesanales', price: 1.5, emoji: '🥐' },
-  { id: 3, name: 'Charcuteria', description: 'Embutidos de calidad con corte en tienda', price: 8.9, emoji: '🥓' },
-  { id: 4, name: 'Productos de Despensa', description: 'Conservas, aceites y basicos del dia a dia', price: 3.5, emoji: '🫒' }
+  { id: 1, name: 'Pan del Día', description: 'Recién horneado en tienda, caliente y crujiente', price: 1.2, emoji: '🥖' },
+  { id: 2, name: 'Bollería Variada', description: 'Croissants, magdalenas y dulces artesanales', price: 1.5, emoji: '🥐' },
+  { id: 3, name: 'Charcutería', description: 'Embutidos de calidad con corte en tienda', price: 8.9, emoji: '🥓' },
+  { id: 4, name: 'Productos de Despensa', description: 'Conservas, aceites y básicos del día a día', price: 3.5, emoji: '🫒' }
 ];
 
 const categoryEmojis = {
@@ -26,6 +40,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
   const [contactStatus, setContactStatus] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [config, setConfig] = useState(defaultConfig);
 
   // Detectar tamaño de pantalla para responsive
   useEffect(() => {
@@ -35,10 +50,42 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadConfig = async () => {
+      try {
+        const response = await configService.get();
+        const data = response?.data || response || {};
+        if (active && data) {
+          setConfig(prev => ({
+            ...prev,
+            ...data,
+            hours: {
+              ...prev.hours,
+              ...(data.hours || {}),
+              weekday: { ...prev.hours.weekday, ...(data.hours?.weekday || {}) }
+            }
+          }));
+        }
+      } catch (error) {
+        console.error('Error al cargar configuración pública:', error);
+      }
+    };
+
+    loadConfig();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const weekdayHours = config.hours?.weekday || defaultConfig.hours.weekday;
+
   const normalizeProduct = (p, index) => ({
     id: p.id || p._id || index,
     name: p.name || p.nombre || 'Producto',
-    description: p.description || p.descripcion || 'Producto de confianza para tu dia a dia',
+    description: p.description || p.descripcion || 'Producto de confianza para tu día a día',
     price: p.price || p.precio || 0,
     image: p.image || p.imagen || p.imagen_url,
     emoji: categoryEmojis[p.category || p.categoria] || categoryEmojis.default,
@@ -80,7 +127,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
               fontWeight: 'var(--font-weight-semibold)',
               marginBottom: 'var(--space-5)'
             }}>
-              Comercio de proximidad desde hace anos
+              Comercio de proximidad desde hace años
             </div>
             <h1 style={{
               fontFamily: 'var(--font-display)',
@@ -90,7 +137,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
               lineHeight: 1.2,
               marginBottom: 'var(--space-4)'
             }}>
-              Panaderia Puri
+              Panadería Puri
             </h1>
             <p style={{
               fontSize: 'var(--font-size-h4)',
@@ -99,7 +146,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
               marginBottom: 'var(--space-4)',
               fontWeight: 'var(--font-weight-medium)'
             }}>
-              Tu tienda de siempre, cada dia mas cerca.
+              Tu tienda de siempre, cada día más cerca.
             </p>
             <p style={{
               fontSize: 'var(--font-size-body-lg)',
@@ -107,7 +154,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
               lineHeight: 1.6,
               marginBottom: 'var(--space-6)'
             }}>
-              Pan recien horneado y productos de alimentacion basica. Tradicion, cercania y confianza en tu barrio.
+              Pan recién horneado y productos de alimentación básica. Tradición, cercanía y confianza en tu barrio.
             </p>
             <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
               <button
@@ -144,7 +191,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
                   cursor: 'pointer'
                 }}
               >
-                Conocer Mas
+                Conocer Más
               </button>
             </div>
           </div>
@@ -158,7 +205,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
           }}>
             <img
               src={heroImage}
-              alt='Panaderia Puri - Pan recien horneado'
+              alt='Panadería Puri - Pan recién horneado'
               style={{
                 position: 'absolute',
                 inset: 0,
@@ -193,9 +240,9 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
             gap: 'var(--space-6)'
           }}>
             {[
-              { icon: Clock, title: 'Pan Recien Horneado', desc: 'Horneado varias veces al dia en tienda' },
+              { icon: Clock, title: 'Pan Recién Horneado', desc: 'Horneado varias veces al día en tienda' },
               { icon: MapPin, title: 'Comercio de Proximidad', desc: 'Tu tienda de barrio de toda la vida' },
-              { icon: Heart, title: 'Trato Cercano', desc: 'Atencion personalizada y de confianza' }
+              { icon: Heart, title: 'Trato Cercano', desc: 'Atención personalizada y de confianza' }
             ].map((feature) => (
               <div key={feature.title} style={{
                 padding: 'var(--space-6)',
@@ -254,7 +301,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
               Productos Destacados
             </h2>
             <p style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-700)' }}>
-              Descubre nuestros productos mas populares
+              Descubre nuestros productos más populares
             </p>
           </div>
 
@@ -391,7 +438,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
               color: 'var(--color-primary)',
               fontStyle: 'italic'
             }}>
-              Tu tienda de siempre, cada dia mas cerca.
+              Tu tienda de siempre, cada día más cerca.
             </p>
           </div>
 
@@ -416,19 +463,19 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
                 color: 'var(--color-neutral-900)',
                 marginBottom: 'var(--space-4)'
               }}>
-                Comercio de Proximidad con Tradicion
+                Comercio de Proximidad con Tradición
               </h3>
               <p style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-700)', lineHeight: 1.8, marginBottom: 'var(--space-4)' }}>
-                Panaderia Puri es un comercio de proximidad con larga trayectoria en el barrio, especializado en pan recien horneado y alimentacion basica.
+                Panadería Puri es un comercio de proximidad con larga trayectoria en el barrio, especializado en pan recién horneado y alimentación básica.
               </p>
               <p style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-700)', lineHeight: 1.8, marginBottom: 'var(--space-4)' }}>
-                Recibimos pan diariamente de nuestros proveedores y lo horneamos en el punto de venta para ofrecerlo caliente y recien hecho.
+                Recibimos pan diariamente de nuestros proveedores y lo horneamos en el punto de venta para ofrecerlo caliente y recién hecho.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-4)' }}>
                 {[
                   { icon: Heart, label: 'Confianza' },
                   { icon: MapPin, label: 'Proximidad' },
-                  { icon: Users, label: 'Tradicion' }
+                  { icon: Users, label: 'Tradición' }
                 ].map((item) => (
                   <div key={item.label} style={{
                     textAlign: 'center',
@@ -469,7 +516,7 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
               Contacto
             </h2>
             <p style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-700)' }}>
-              Tienes alguna pregunta? Escribenos y te responderemos lo antes posible.
+              ¿Tienes alguna pregunta? Escríbenos y te responderemos lo antes posible.
             </p>
           </div>
 
@@ -481,24 +528,26 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
                 color: 'var(--color-neutral-900)',
                 marginBottom: 'var(--space-5)'
               }}>
-                Informacion de Contacto
+                Información de Contacto
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                 <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
                   <MapPin size={20} style={{ color: 'var(--color-primary)' }} />
-                  <span style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-900)' }}>Calle comercial del barrio</span>
+                  <span style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-900)' }}>Avenida de las Ciencias, 49</span>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
                   <Phone size={20} style={{ color: 'var(--color-primary)' }} />
-                  <span style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-900)' }}>+34 XXX XXX XXX</span>
+                  <span style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-900)' }}>{config.contactPhone}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
                   <Mail size={20} style={{ color: 'var(--color-primary)' }} />
-                  <span style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-900)' }}>admin@panaderia.com</span>
+                  <span style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-900)' }}>{config.contactEmail}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
                   <Clock size={20} style={{ color: 'var(--color-primary)' }} />
-                  <span style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-900)' }}>L-V 7:00-14:30 / 17:30-20:30</span>
+                  <span style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-900)' }}>
+                    L-V {weekdayHours.morningOpen}-{weekdayHours.morningClose} / {weekdayHours.afternoonOpen}-{weekdayHours.afternoonClose}
+                  </span>
                 </div>
               </div>
             </div>
@@ -510,13 +559,13 @@ export default function HFLanding({ onNavigate, featuredProducts: propProducts, 
                 color: 'var(--color-neutral-900)',
                 marginBottom: 'var(--space-5)'
               }}>
-                Envia un Mensaje
+                Envía un Mensaje
               </h3>
 
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  const mailtoLink = `mailto:admin@panaderia.com?subject=Contacto desde web - ${contactForm.name}&body=${encodeURIComponent(`Nombre: ${contactForm.name}\nEmail: ${contactForm.email}\n\nMensaje:\n${contactForm.message}`)}`;
+                      const mailtoLink = `mailto:${config.contactEmail}?subject=Contacto desde web - ${contactForm.name}&body=${encodeURIComponent(`Nombre: ${contactForm.name}\nEmail: ${contactForm.email}\n\nMensaje:\n${contactForm.message}`)}`;
                   window.location.href = mailtoLink;
                   setContactStatus('success');
                   setContactForm({ name: '', email: '', message: '' });

@@ -1,6 +1,11 @@
 import React from 'react';
 import { Search, SlidersHorizontal, ShoppingCart } from 'lucide-react';
 
+// Establecer título de la página
+if (typeof document !== 'undefined') {
+  document.title = 'Catálogo - Panadería Puri';
+}
+
 export default function HFCatalog({ viewport = 'desktop' }) {
   const isMobile = viewport === 'mobile';
   const products = Array(9).fill(null).map((_, i) => ({

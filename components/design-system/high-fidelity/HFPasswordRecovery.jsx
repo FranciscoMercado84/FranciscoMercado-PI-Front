@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
-import { Mail, ArrowRight, CheckCircle } from 'lucide-react';
+import { Mail, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 
-export default function HFPasswordRecovery({ onNavigate }) {
-  const [emailSent, setEmailSent] = useState(false);
+export default function HFPasswordRecovery({ onNavigate, onSubmit, isLoading = false, error = null, successMessage = null }) {
+  const [email, setEmail] = useState('');
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (onSubmit) {
+      await onSubmit(email.trim());
+    }
+  };
 
   return (
     <div style={{
@@ -23,9 +30,8 @@ export default function HFPasswordRecovery({ onNavigate }) {
         padding: 'var(--space-10)',
         boxShadow: 'var(--shadow-high)'
       }}>
-        {!emailSent ? (
+        {!successMessage ? (
           <>
-            {/* Logo */}
             <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
               <div style={{
                 width: '80px',
@@ -59,8 +65,7 @@ export default function HFPasswordRecovery({ onNavigate }) {
               </p>
             </div>
 
-            {/* Form */}
-            <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 'var(--space-5)' }}>
               <div>
                 <label style={{
                   display: 'flex',
@@ -76,7 +81,9 @@ export default function HFPasswordRecovery({ onNavigate }) {
                 </label>
                 <input
                   type="email"
+                  value={email}
                   placeholder="tu@email.com"
+                  onChange={(e) => setEmail(e.target.value)}
                   style={{
                     width: '100%',
                     padding: 'var(--space-4)',
@@ -97,11 +104,27 @@ export default function HFPasswordRecovery({ onNavigate }) {
                 />
               </div>
 
+              {error && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 'var(--space-2)',
+                  padding: 'var(--space-3) var(--space-4)',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)'
+                }}>
+                  <AlertCircle size={18} style={{ color: '#dc2626', flexShrink: 0, marginTop: '2px' }} />
+                  <span style={{ fontSize: 'var(--font-size-body-s)', lineHeight: 1.5 }}>{error}</span>
+                </div>
+              )}
+
               <button
-                onClick={() => setEmailSent(true)}
+                type="submit"
+                disabled={isLoading}
                 style={{
                   padding: 'var(--space-4)',
-                  background: 'var(--color-primary)',
+                  background: isLoading ? 'var(--color-neutral-400)' : 'var(--color-primary)',
                   color: 'white',
                   border: 'none',
                   borderRadius: 'var(--radius-lg)',
@@ -116,17 +139,19 @@ export default function HFPasswordRecovery({ onNavigate }) {
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
+                  if (isLoading) return;
                   e.currentTarget.style.background = 'var(--color-primary-hover)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = 'var(--shadow-high)';
                 }}
                 onMouseLeave={(e) => {
+                  if (isLoading) return;
                   e.currentTarget.style.background = 'var(--color-primary)';
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
                 }}
               >
-                Enviar Enlace
+                {isLoading ? 'Enviando...' : 'Enviar Enlace'}
                 <ArrowRight size={20} />
               </button>
 
@@ -148,7 +173,7 @@ export default function HFPasswordRecovery({ onNavigate }) {
                   ← Volver al inicio de sesión
                 </a>
               </div>
-            </div>
+            </form>
           </>
         ) : (
           <div style={{ textAlign: 'center' }}>
@@ -179,7 +204,7 @@ export default function HFPasswordRecovery({ onNavigate }) {
               marginBottom: 'var(--space-6)',
               lineHeight: 1.6
             }}>
-              Hemos enviado un enlace de recuperación a tu email. Revisa tu bandeja de entrada y sigue las instrucciones.
+              {successMessage || 'Hemos enviado un enlace de recuperación a tu email. Revisa tu bandeja de entrada y sigue las instrucciones.'}
             </p>
             <div style={{
               background: 'var(--color-info-light)',
@@ -193,28 +218,43 @@ export default function HFPasswordRecovery({ onNavigate }) {
             }}>
               💡 Si no recibes el email en unos minutos, revisa tu carpeta de spam.
             </div>
-            <button 
+            <button
               onClick={() => onNavigate?.('landing')}
               style={{
-              padding: 'var(--space-3) var(--space-6)',
-              background: 'var(--color-primary)',
-              color: 'white',
-              border: 'none',
-              borderRadius: 'var(--radius-lg)',
-              fontSize: 'var(--font-size-body-m)',
-              fontWeight: 'var(--font-weight-semibold)',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--color-primary-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--color-primary)';
-            }}
+                padding: 'var(--space-3) var(--space-6)',
+                background: 'var(--color-primary)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--radius-lg)',
+                fontSize: 'var(--font-size-body-m)',
+                fontWeight: 'var(--font-weight-semibold)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--color-primary-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--color-primary)';
+              }}
             >
               Volver al Inicio
             </button>
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <a
+                href="#"
+                onClick={(e) => { e.preventDefault(); onNavigate?.('login'); }}
+                style={{
+                  fontSize: 'var(--font-size-body-m)',
+                  color: 'var(--color-primary)',
+                  textDecoration: 'none',
+                  fontWeight: 'var(--font-weight-medium)',
+                  cursor: 'pointer'
+                }}
+              >
+                ← Volver al inicio de sesión
+              </a>
+            </div>
           </div>
         )}
       </div>

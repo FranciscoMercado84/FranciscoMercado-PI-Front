@@ -49,12 +49,22 @@ export const AdminProductFormPage = () => {
       setIsProcessing(true);
       setError(null);
 
+      const { imageFile, ...payload } = productData;
+      let productId = id;
+      let response = null;
+
       if (id) {
         // Actualizar producto existente
-        await productService.update(id, productData);
+        response = await productService.update(id, payload);
       } else {
         // Crear nuevo producto
-        await productService.create(productData);
+        response = await productService.create(payload);
+        const createdProduct = response?.data || response?.producto || response || {};
+        productId = createdProduct.id || createdProduct._id || createdProduct.producto_id || createdProduct.productId || productId;
+      }
+
+      if (imageFile && productId) {
+        await productService.uploadImage(productId, imageFile);
       }
 
       setProductSaved(true);

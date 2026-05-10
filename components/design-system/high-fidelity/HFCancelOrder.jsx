@@ -59,7 +59,7 @@ export default function HFCancelOrder() {
             marginBottom: 'var(--space-8)',
             lineHeight: 1.6
           }}>
-            ¿Estás seguro de que deseas cancelar el pedido <strong>#ORD-285</strong>?
+            ¿Estás seguro de que deseas cancelar este pedido?
           </p>
 
           {/* Order Summary */}

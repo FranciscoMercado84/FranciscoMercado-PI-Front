@@ -14,6 +14,8 @@ import { LandingPage } from '../pages/public/LandingPage';
 import { LoginPage } from '../pages/public/LoginPage';
 import { RegisterPage } from '../pages/public/RegisterPage';
 import { RecoverPage } from '../pages/public/RecoverPage';
+import { ResetPasswordPage } from '../pages/public/ResetPasswordPage';
+import { LegalPage } from '../pages/public/LegalPage';
 
 // Customer Pages
 import { CatalogPage } from '../pages/customer/CatalogPage';
@@ -50,6 +52,10 @@ export const AppRouter = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/recover" element={<RecoverPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/privacidad" element={<LegalPage type="privacy" />} />
+            <Route path="/terminos" element={<LegalPage type="terms" />} />
+            <Route path="/cookies" element={<LegalPage type="cookies" />} />
           </Route>
 
           {/* Public Customer Routes (accessible without auth) */}

@@ -7,6 +7,30 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const clearSession = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+  };
+
+  const normalizeUser = (response) => {
+    const sourceUser = response?.data?.user || response?.user || response?.data || response;
+
+    if (!sourceUser || typeof sourceUser !== 'object') {
+      return null;
+    }
+
+    return {
+      id: sourceUser.id || sourceUser._id,
+      email: sourceUser.email,
+      role: sourceUser.rol || sourceUser.role,
+      name: sourceUser.nombre || sourceUser.name,
+      telefono: sourceUser.telefono || sourceUser.phone || '',
+      direccion: sourceUser.direccion || '',
+      cedula: sourceUser.cedula || '',
+      token: sourceUser.token || response?.data?.access_token || response?.access_token,
+    };
+  };
+
   const login = async (email, password) => {
     try {
       // Llamada real a la API del backend
@@ -17,13 +41,11 @@ export const AuthProvider = ({ children }) => {
       console.log('🔍 [AuthContext] response.data.user:', response.data?.user);
       
       // Mapear la respuesta del backend a la estructura esperada
-      const userData = {
-        id: response.data.user.id || response.data.user._id,
-        email: response.data.user.email,
-        role: response.data.user.rol || response.data.user.role, // Mapear 'rol' del backend a 'role'
-        name: response.data.user.nombre || response.data.user.name,
-        token: response.data.access_token, // Guardar el token JWT
-      };
+      const userData = normalizeUser(response);
+
+      if (!userData) {
+        throw new Error('No se pudo obtener la información del usuario');
+      }
       
       console.log('✅ [AuthContext] Usuario mapeado:', userData);
       console.log('✅ [AuthContext] isAdmin será:', userData.role === 'admin');
@@ -39,28 +61,59 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
+    clearSession();
   };
 
   // Restaurar sesión del localStorage al montar
   React.useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    console.log('🔄 [AuthContext] Restaurando sesión del localStorage:', storedUser);
-    if (storedUser) {
+    const validateStoredSession = async (parsedUser) => {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        console.log('✅ [AuthContext] Usuario restaurado:', parsedUser);
-        console.log('✅ [AuthContext] isAdmin será:', parsedUser.role === 'admin');
+        const profileResponse = await authService.getProfile();
+        const normalizedProfile = normalizeUser(profileResponse);
+
+        if (normalizedProfile) {
+          setUser({
+            ...parsedUser,
+            ...normalizedProfile,
+            token: parsedUser.token,
+          });
+          return;
+        }
+
         setUser(parsedUser);
       } catch (error) {
-        console.error('❌ [AuthContext] Error al parsear usuario del localStorage:', error);
-        localStorage.removeItem('user');
+        if (error.status === 401 || error.status === 403) {
+          console.warn('⚠️ [AuthContext] Sesión inválida o cuenta inactiva, limpiando estado local');
+          clearSession();
+        } else {
+          console.warn('⚠️ [AuthContext] No se pudo validar la sesión local, se conserva temporalmente:', error);
+          setUser(parsedUser);
+        }
       }
-    } else {
-      console.log('ℹ️ [AuthContext] No hay usuario en localStorage');
-    }
-    setIsLoading(false);
+    };
+
+    const restoreSession = async () => {
+      const storedUser = localStorage.getItem('user');
+      console.log('🔄 [AuthContext] Restaurando sesión del localStorage:', storedUser);
+
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          console.log('✅ [AuthContext] Usuario restaurado:', parsedUser);
+          console.log('✅ [AuthContext] isAdmin será:', parsedUser.role === 'admin');
+          await validateStoredSession(parsedUser);
+        } catch (error) {
+          console.error('❌ [AuthContext] Error al parsear usuario del localStorage:', error);
+          clearSession();
+        }
+      } else {
+        console.log('ℹ️ [AuthContext] No hay usuario en localStorage');
+      }
+
+      setIsLoading(false);
+    };
+
+    restoreSession();
   }, []);
 
   if (isLoading) {
@@ -75,6 +128,17 @@ export const AuthProvider = ({ children }) => {
         isAdmin: user?.role === 'admin',
         login,
         logout,
+        updateUser: (updates) => {
+          setUser((currentUser) => {
+            if (!currentUser) return currentUser;
+            const nextUser = {
+              ...currentUser,
+              ...updates,
+            };
+            localStorage.setItem('user', JSON.stringify(nextUser));
+            return nextUser;
+          });
+        },
       }}
     >
       {children}

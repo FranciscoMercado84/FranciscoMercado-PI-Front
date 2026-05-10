@@ -55,23 +55,32 @@ export default function HFAdminDashboard({ stats: propStats, recentOrders: propR
       {/* Header */}
       <div style={{
         background: 'linear-gradient(135deg, var(--color-secondary) 0%, var(--color-secondary-hover) 100%)',
-        padding: 'var(--space-8)',
-        borderRadius: 'var(--radius-xl)',
+        padding: 'var(--space-6)',
+        borderRadius: '16px',
         color: 'white',
-        marginBottom: 'var(--space-8)',
-        boxShadow: 'var(--shadow-medium)'
+        marginBottom: 'var(--space-6)',
+        boxShadow: 'var(--shadow-medium)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 'var(--space-6)'
       }}>
-        <h1 style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: 'var(--font-size-h2)',
-          fontWeight: 'var(--font-weight-bold)',
-          marginBottom: 'var(--space-2)'
-        }}>
-          Dashboard
-        </h1>
-        <p style={{ fontSize: 'var(--font-size-body-lg)', opacity: 0.9 }}>
-          Bienvenido, Admin • {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
+        <div>
+          <h1 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'var(--font-size-h2)',
+            fontWeight: 'var(--font-weight-bold)',
+            marginBottom: 'var(--space-2)'
+          }}>
+            Dashboard
+          </h1>
+          <p style={{ fontSize: 'var(--font-size-body-lg)', opacity: 0.95 }}>
+            Bienvenido, Admin • {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
+        <div style={{ textAlign: 'right', minWidth: '220px' }}>
+          <div style={{ fontSize: 'var(--font-size-body-m)', opacity: 0.9 }}>Panel de Administración</div>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -100,28 +109,34 @@ export default function HFAdminDashboard({ stats: propStats, recentOrders: propR
           }}
           onClick={stat.onClick}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-4)', alignItems: 'center' }}>
               <div style={{
-                width: '48px',
-                height: '48px',
+                width: '56px',
+                height: '56px',
                 background: `${stat.color}20`,
-                borderRadius: 'var(--radius-lg)',
+                borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <stat.icon size={24} style={{ color: stat.color }} />
+                <stat.icon size={28} style={{ color: stat.color }} />
               </div>
-              <span style={{
-                padding: 'var(--space-1) var(--space-3)',
-                background: 'var(--color-success-light)',
-                color: 'var(--color-success-dark)',
-                borderRadius: 'var(--radius-full)',
-                fontSize: 'var(--font-size-caption)',
-                fontWeight: 'var(--font-weight-bold)'
-              }}>
-                {stat.change}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '48px' }}>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '40px',
+                  height: '40px',
+                  background: stat.change.startsWith('+') ? 'var(--color-success-light)' : 'var(--color-error-light)',
+                  color: stat.change.startsWith('+') ? 'var(--color-success-dark)' : 'var(--color-error)',
+                  borderRadius: '999px',
+                  fontSize: 'var(--font-size-caption)',
+                  fontWeight: 'var(--font-weight-bold)'
+                }}>
+                  {stat.change}
+                </span>
+              </div>
             </div>
             <div style={{
               fontSize: 'var(--font-size-h3)',

@@ -263,18 +263,21 @@ export default function HFReports({
               <Calendar size={24} style={{ color: 'var(--color-secondary)' }} />
               Ventas por Día
             </h2>
+            <p style={{ color: 'var(--color-neutral-700)', marginTop: '8px', marginBottom: '12px', fontSize: 'var(--font-size-body-s)', maxWidth: '720px' }}>
+              Ventas por día (L-M-X-J-V-S-D). Cada barra muestra el total de ventas del día.
+            </p>
             <div style={{
-              height: '280px',
+              height: '320px',
               display: 'flex',
               alignItems: 'flex-end',
               justifyContent: 'space-around',
               gap: 'var(--space-2)',
-              padding: 'var(--space-4)',
+              padding: 'var(--space-6) var(--space-4) 24px  var(--space-4)',
               background: 'var(--color-neutral-100)',
               borderRadius: 'var(--radius-lg)'
             }}>
               {chartData.map((data, i) => {
-                const height = maxVentas > 0 ? (data.ventas / maxVentas) * 240 : 20;
+                const height = maxVentas > 0 ? (data.ventas / maxVentas) * 240 : 0;
                 return (
                   <div key={i} style={{
                     flex: 1,
@@ -283,11 +286,15 @@ export default function HFReports({
                     alignItems: 'center',
                     gap: 'var(--space-2)'
                   }}>
+                    <div style={{ height: '8px' }} />
+                    <div style={{ fontSize: 'var(--font-size-caption)', color: 'var(--color-neutral-700)', marginBottom: '6px' }}>
+                      ${data.ventas.toFixed(2)}
+                    </div>
                     <div
                       style={{
                         width: '100%',
-                        minHeight: '20px',
-                        height: `${Math.max(height, 20)}px`,
+                        minHeight: '8px',
+                        height: `${Math.max(height, 8)}px`,
                         background: data.ventas > 0
                           ? 'linear-gradient(to top, var(--color-primary), var(--color-primary-hover))'
                           : 'var(--color-neutral-300)',

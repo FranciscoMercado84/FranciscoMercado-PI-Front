@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Package, Tag, DollarSign, Hash, FileText, Image as ImageIcon, Save, X, Loader, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Package, Tag, DollarSign, FileText, Image as ImageIcon, Save, X, Loader, Upload, Trash2 } from 'lucide-react';
 
 // Valores por defecto para un producto nuevo
 const defaultFormData = {
   nombre: '',
   categoria: '',
   precio: '',
-  stock: '',
-  stock_minimo: '10',
   descripcion: '',
   disponible: true,
-  imagen: ''
+  imagen: '',
+  imageFile: null,
+  imagePreview: ''
 };
 
 export default function HFAdminProductForm({ product, onNavigate, onSubmit, isProcessing = false, categories = [] }) {
   const [formData, setFormData] = useState(defaultFormData);
+  const fileInputRef = useRef(null);
   const isEditing = !!product;
 
   // Cargar datos del producto si estamos editando
@@ -24,11 +25,11 @@ export default function HFAdminProductForm({ product, onNavigate, onSubmit, isPr
         nombre: product.nombre || product.name || '',
         categoria: product.categoria || product.category || '',
         precio: product.precio || product.price || '',
-        stock: product.stock ?? product.inventario ?? '',
-        stock_minimo: product.stock_minimo ?? 10,
         descripcion: product.descripcion || product.description || '',
         disponible: product.disponible ?? product.available ?? true,
-        imagen: product.imagen || product.image || ''
+        imagen: product.imagen || product.image || product.imagen_url || '',
+        imageFile: null,
+        imagePreview: product.imagen || product.image || product.imagen_url || ''
       });
     }
   }, [product]);
@@ -36,6 +37,53 @@ export default function HFAdminProductForm({ product, onNavigate, onSubmit, isPr
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleImagePick = (file) => {
+    if (!file) {
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setFormData((prev) => {
+      if (prev.imagePreview && prev.imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(prev.imagePreview);
+      }
+
+      return {
+        ...prev,
+        imageFile: file,
+        imagePreview: previewUrl
+      };
+    });
+  };
+
+  const handleRemoveImage = () => {
+    setFormData((prev) => {
+      if (prev.imagePreview && prev.imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(prev.imagePreview);
+      }
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      return {
+        ...prev,
+        imageFile: null,
+        imagePreview: '',
+        imagen: ''
+      };
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (formData.imagePreview && formData.imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(formData.imagePreview);
+      }
+    };
+  }, [formData.imagePreview]);
 
   const handleSubmit = () => {
     // Validación básica
@@ -52,11 +100,10 @@ export default function HFAdminProductForm({ product, onNavigate, onSubmit, isPr
       nombre: formData.nombre.trim(),
       categoria: formData.categoria || 'General',
       precio: parseFloat(formData.precio),
-      stock: parseInt(formData.stock) || 0,
-      stock_minimo: parseInt(formData.stock_minimo) || 10,
       descripcion: formData.descripcion.trim(),
       disponible: formData.disponible,
-      imagen: formData.imagen
+      imagen: formData.imagen,
+      imageFile: formData.imageFile
     });
   };
 
@@ -121,11 +168,12 @@ export default function HFAdminProductForm({ product, onNavigate, onSubmit, isPr
               <div style={{
                 border: '2px dashed var(--color-neutral-300)',
                 borderRadius: 'var(--radius-lg)',
-                padding: 'var(--space-10)',
+                padding: 'var(--space-8)',
                 textAlign: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
+              onClick={() => fileInputRef.current?.click()}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = 'var(--color-secondary)';
                 e.currentTarget.style.background = 'var(--color-neutral-100)';
@@ -135,13 +183,75 @@ export default function HFAdminProductForm({ product, onNavigate, onSubmit, isPr
                 e.currentTarget.style.background = 'transparent';
               }}
               >
-                <ImageIcon size={48} style={{ color: 'var(--color-neutral-300)', marginBottom: 'var(--space-3)' }} />
-                <p style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-700)' }}>
-                  Haz clic o arrastra una imagen aquí
-                </p>
-                <p style={{ fontSize: 'var(--font-size-caption)', color: 'var(--color-neutral-500)', marginTop: 'var(--space-2)' }}>
-                  PNG, JPG hasta 5MB
-                </p>
+                {formData.imagePreview ? (
+                  <div style={{ display: 'grid', gap: 'var(--space-3)', justifyItems: 'center' }}>
+                    <img
+                      src={formData.imagePreview}
+                      alt="Vista previa del producto"
+                      style={{
+                        width: '100%',
+                        maxWidth: '320px',
+                        height: '220px',
+                        objectFit: 'cover',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--color-neutral-300)'
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{
+                          padding: 'var(--space-2) var(--space-4)',
+                          background: 'var(--color-secondary)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 'var(--radius-lg)',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 'var(--space-2)'
+                        }}
+                      >
+                        <Upload size={16} /> Cambiar imagen
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        style={{
+                          padding: 'var(--space-2) var(--space-4)',
+                          background: 'white',
+                          color: 'var(--color-error)',
+                          border: '1px solid var(--color-neutral-300)',
+                          borderRadius: 'var(--radius-lg)',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 'var(--space-2)'
+                        }}
+                      >
+                        <Trash2 size={16} /> Quitar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <ImageIcon size={48} style={{ color: 'var(--color-neutral-300)', marginBottom: 'var(--space-3)' }} />
+                    <p style={{ fontSize: 'var(--font-size-body-m)', color: 'var(--color-neutral-700)' }}>
+                      Haz clic para añadir una imagen
+                    </p>
+                    <p style={{ fontSize: 'var(--font-size-caption)', color: 'var(--color-neutral-500)', marginTop: 'var(--space-2)' }}>
+                      PNG, JPG hasta 5MB
+                    </p>
+                  </>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => handleImagePick(e.target.files?.[0])}
+                />
               </div>
             </div>
 
@@ -252,70 +362,7 @@ export default function HFAdminProductForm({ product, onNavigate, onSubmit, isPr
                 />
               </div>
 
-              <div>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  fontSize: 'var(--font-size-body-m)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-neutral-900)',
-                  marginBottom: 'var(--space-2)'
-                }}>
-                  <Hash size={18} style={{ color: 'var(--color-secondary)' }} />
-                  Stock Inicial
-                </label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={formData.stock}
-                  onChange={(e) => handleChange('stock', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-3) var(--space-4)',
-                    border: '2px solid var(--color-neutral-300)',
-                    borderRadius: 'var(--radius-lg)',
-                    fontSize: 'var(--font-size-body-m)',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  fontSize: 'var(--font-size-body-m)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-neutral-900)',
-                  marginBottom: 'var(--space-2)'
-                }}>
-                  <AlertTriangle size={18} style={{ color: 'var(--color-warning)' }} />
-                  Stock Mínimo (Alerta)
-                </label>
-                <input
-                  type="number"
-                  placeholder="10"
-                  value={formData.stock_minimo}
-                  onChange={(e) => handleChange('stock_minimo', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-3) var(--space-4)',
-                    border: '2px solid var(--color-neutral-300)',
-                    borderRadius: 'var(--radius-lg)',
-                    fontSize: 'var(--font-size-body-m)',
-                    outline: 'none'
-                  }}
-                />
-                <p style={{
-                  fontSize: 'var(--font-size-caption)',
-                  color: 'var(--color-neutral-500)',
-                  marginTop: 'var(--space-1)'
-                }}>
-                  Se mostrará alerta cuando el stock sea menor a este valor
-                </p>
-              </div>
+              {/* Stock management removed: se gestiona en tienda física */}
             </div>
 
             {/* Description */}

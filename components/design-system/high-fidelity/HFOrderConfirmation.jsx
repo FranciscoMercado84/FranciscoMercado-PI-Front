@@ -65,7 +65,7 @@ export default function HFOrderConfirmation({ onNavigate }) {
             fontWeight: 'var(--font-weight-semibold)',
             color: 'var(--color-neutral-900)'
           }}>
-            Número de Pedido: <span style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>#ORD-285</span>
+            Tu pedido está confirmado
           </span>
         </div>
 

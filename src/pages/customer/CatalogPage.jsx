@@ -13,22 +13,63 @@ export const CatalogPage = () => {
   const { isAuthenticated } = useAuth();
   const { addItem } = useCart();
   const [products, setProducts] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [sortOption, setSortOption] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    const timeoutId = window.setTimeout(() => {
+      loadProducts();
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchTerm, selectedCategory, sortOption]);
+
+  const getQueryParams = () => {
+    const params = {};
+
+    if (searchTerm.trim()) {
+      params.q = searchTerm.trim();
+    }
+
+    if (selectedCategory) {
+      params.categoria = selectedCategory;
+    }
+
+    if (sortOption) {
+      params.sort = sortOption;
+    }
+
+    return params;
+  };
+
+  const mergeCategories = (productsList) => {
+    const categories = productsList
+      .map((product) => product.categoria || product.category)
+      .filter(Boolean);
+
+    setAvailableCategories((current) => {
+      const merged = new Set(current);
+      categories.forEach((category) => merged.add(category));
+      return Array.from(merged).sort((a, b) => a.localeCompare(b, 'es'));
+    });
+  };
 
   const loadProducts = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await productService.getAll();
+      const response = await productService.getAll(getQueryParams());
       // La respuesta puede venir como response.data o directamente como array
-      const productList = response.data || response || [];
-      setProducts(Array.isArray(productList) ? productList : []);
+      const productList = response.data || response.productos || response || [];
+      const normalizedProducts = Array.isArray(productList) ? productList : [];
+      setProducts(normalizedProducts);
+      mergeCategories(normalizedProducts);
     } catch (err) {
       console.error('Error al cargar productos:', err);
       setError(err.message || 'Error al cargar los productos');
@@ -40,6 +81,13 @@ export const CatalogPage = () => {
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('');
+    setSortOption('');
+    setFiltersOpen(false);
   };
 
   const handleAddToCart = async (productId) => {
@@ -92,10 +140,16 @@ export const CatalogPage = () => {
   }
 
   if (products.length === 0) {
+    const hasActiveFilters = Boolean(searchTerm.trim() || selectedCategory || sortOption);
+
     return (
       <EmptyState
-        title="No hay productos disponibles"
-        message="Aún no hay productos en el catálogo. Vuelve pronto."
+        title={hasActiveFilters ? 'No hay resultados' : 'No hay productos disponibles'}
+        message={hasActiveFilters
+          ? 'Prueba a cambiar la búsqueda, la categoría o el orden para ver más productos.'
+          : 'Aún no hay productos en el catálogo. Vuelve pronto.'}
+        actionLabel={hasActiveFilters ? 'Limpiar filtros' : undefined}
+        onAction={hasActiveFilters ? handleClearFilters : undefined}
       />
     );
   }
@@ -125,6 +179,16 @@ export const CatalogPage = () => {
       )}
       <HFProductCatalog 
         products={products}
+        categories={availableCategories}
+        searchTerm={searchTerm}
+        selectedCategory={selectedCategory}
+        sortOption={sortOption}
+        filtersOpen={filtersOpen}
+        onSearchChange={setSearchTerm}
+        onCategoryChange={setSelectedCategory}
+        onSortChange={setSortOption}
+        onToggleFilters={() => setFiltersOpen((current) => !current)}
+        onResetFilters={handleClearFilters}
         onNavigate={handleNavigate}
         onAddToCart={handleAddToCart}
       />

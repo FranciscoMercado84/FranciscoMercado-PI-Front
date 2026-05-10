@@ -93,6 +93,9 @@ export const LandingPage = () => {
       'profile': '/profile',
       'landing': '/',
       'admin-login': '/admin/login',
+      'privacy': '/privacidad',
+      'terms': '/terminos',
+      'cookies': '/cookies',
       'contact': 'scroll-contact',
       'about': 'scroll-about'
     };

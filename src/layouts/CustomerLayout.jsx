@@ -17,19 +17,16 @@ export const CustomerLayout = ({ children }) => {
       'catalog': '/catalog',
       'cart': '/cart',
       'profile': '/profile',
-      'login': '/login'
+      'login': '/login',
+      'privacy': '/privacidad',
+      'terms': '/terminos',
+      'cookies': '/cookies',
+      'about': '/#about',
+      'contact': '/#contact'
     };
 
-    // Para about y contact, verificar si estamos en la landing
     if (screenId === 'about' || screenId === 'contact') {
-      const element = document.getElementById(screenId);
-      if (element) {
-        // Si el elemento existe, hacer scroll
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        // Si no existe, navegar a la landing con hash
-        navigate(`/#${screenId}`);
-      }
+      navigate(routes[screenId]);
       return;
     }
 

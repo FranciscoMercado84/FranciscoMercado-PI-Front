@@ -5,7 +5,9 @@
 
 class ApiClient {
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/v1';
+    const envBaseURL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
+    // Normaliza la base URL para evitar barras finales duplicadas al concatenar endpoints.
+    this.baseURL = (envBaseURL || 'http://localhost:3001/v1').replace(/\/+$/, '');
   }
 
   /**
@@ -52,7 +54,30 @@ class ApiClient {
     const data = isJson ? await response.json() : await response.text();
 
     if (!response.ok) {
-      const error = new Error(data.message || 'Error en la petición');
+      // Construir mensaje de error intentado extraer detalles del body
+      const fallbackMessage = response.status === 401
+        ? 'Tu sesión ha expirado o tu cuenta está inactiva. Vuelve a iniciar sesión.'
+        : response.status === 403
+          ? 'No tienes permisos para realizar esta acción.'
+          : 'Error en la petición';
+
+      let errorMessage = fallbackMessage;
+      if (data && typeof data === 'object') {
+        if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (data.errors) {
+          // Puede ser array de errores o objeto {field: [..]}
+          if (Array.isArray(data.errors)) {
+            errorMessage = data.errors.map(e => (e.msg || e.message || JSON.stringify(e))).join('; ');
+          } else if (typeof data.errors === 'object') {
+            errorMessage = Object.entries(data.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('; ');
+          }
+        }
+      }
+
+      const error = new Error(errorMessage);
       error.status = response.status;
       error.data = data;
       throw error;
@@ -167,11 +192,49 @@ export const authService = {
   },
 
   /**
+   * Solicitar recuperación de contraseña
+   * @param {string} email - Correo del usuario
+   * @returns {Promise<object>}
+   */
+  async forgotPassword(email) {
+    return await apiClient.post('/auth/forgot-password', { email }, { auth: false });
+  },
+
+  /**
+   * Validar token de restablecimiento
+   * @param {string} token - Token recibido por email
+   * @returns {Promise<object>}
+   */
+  async validateResetToken(token) {
+    const query = token ? `?token=${encodeURIComponent(token)}` : '';
+    return await apiClient.get(`/auth/reset-password${query}`, { auth: false });
+  },
+
+  /**
+   * Restablecer contraseña
+   * @param {string} token - Token recibido por email
+   * @param {string} newPassword - Nueva contraseña
+   * @returns {Promise<object>}
+   */
+  async resetPassword(token, newPassword) {
+    return await apiClient.post('/auth/reset-password', { token, newPassword }, { auth: false });
+  },
+
+  /**
    * Obtener perfil del usuario autenticado
    * @returns {Promise<object>}
    */
   async getProfile() {
     return await apiClient.get('/auth/profile');
+  },
+
+  /**
+   * Actualizar perfil del usuario autenticado
+   * @param {object} profileData - Datos de perfil a guardar
+   * @returns {Promise<object>}
+   */
+  async updateProfile(profileData) {
+    return await apiClient.put('/auth/profile', profileData);
   },
 };
 
@@ -184,10 +247,33 @@ export const productService = {
    * @param {object} params - Parámetros de búsqueda (filtros, paginación, etc.)
    * @returns {Promise<{data: Array}>}
    */
-  async getAll(params = {}) {
+  async getAll(params = {}, options = {}) {
     const queryString = new URLSearchParams(params).toString();
     const endpoint = queryString ? `/productos?${queryString}` : '/productos';
-    return await apiClient.get(endpoint, { auth: false });
+    return await apiClient.get(endpoint, { auth: options.auth !== false });
+  },
+
+  /**
+   * Obtener todos los productos para administración
+   * @param {object} params - Parámetros de búsqueda
+   * @returns {Promise<{data: Array}>}
+   */
+  async getAllAdmin(params = {}) {
+    // Por compatibilidad con el backend, la vista admin por defecto debe
+    // devolver todos los productos (disponibles y no disponibles).
+    const safeParams = { ...params };
+    if (typeof safeParams.disponible === 'undefined') {
+      safeParams.disponible = 'all';
+    }
+
+    try {
+      const response = await this.getAll(safeParams, { auth: true });
+      const items = Array.isArray(response) ? response : (response.data || response.productos || response.products || []);
+      return Array.isArray(items) ? items : [];
+    } catch (err) {
+      console.warn('getAllAdmin fallo usando /productos?disponible=all:', err.message || err);
+      return [];
+    }
   },
 
   /**
@@ -492,6 +578,28 @@ export const pedidoService = {
     }
 
     return { success: itemsAdded > 0, itemsAdded };
+  },
+};
+
+/**
+ * Servicio de configuración general de la aplicación
+ */
+export const configService = {
+  /**
+   * Obtener la configuración general pública
+   * @returns {Promise<{data: object}>}
+   */
+  async get() {
+    return await apiClient.get('/configuracion-general', { auth: false });
+  },
+
+  /**
+   * Actualizar la configuración general (admin)
+   * @param {object} configData - Campos a actualizar
+   * @returns {Promise<{data: object}>}
+   */
+  async update(configData) {
+    return await apiClient.put('/configuracion-general', configData);
   },
 };
 

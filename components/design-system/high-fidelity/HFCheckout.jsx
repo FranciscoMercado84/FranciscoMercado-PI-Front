@@ -1,6 +1,11 @@
 import React from 'react';
 import { User, Phone, Mail, Calendar, Clock, ArrowRight, ArrowLeft, AlertCircle } from 'lucide-react';
 
+// Establecer título de la página
+if (typeof document !== 'undefined') {
+  document.title = 'Checkout - Panadería Puri';
+}
+
 // Carrito por defecto
 const defaultCart = {
   items: [
@@ -24,6 +29,11 @@ const HORARIOS_LOCAL = {
     morning: { start: '08:00', end: '14:30' },
     afternoon: null // Cerrado por la tarde
   }
+};
+
+const toLocalDateKey = (date = new Date()) => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().split('T')[0];
 };
 
 // Generar horarios disponibles en intervalos de 30 minutos
@@ -53,7 +63,7 @@ const generateTimeSlots = (start, end) => {
 const getAvailableTimeSlots = (dateStr) => {
   if (!dateStr) return [];
   
-  const date = new Date(dateStr);
+  const date = new Date(`${dateStr}T00:00:00`);
   const dayOfWeek = date.getDay(); // 0 = Domingo, 6 = Sábado
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
   
@@ -64,18 +74,33 @@ const getAvailableTimeSlots = (dateStr) => {
   if (schedule.afternoon) {
     slots = [...slots, ...generateTimeSlots(schedule.afternoon.start, schedule.afternoon.end)];
   }
+
+  if (dateStr === toLocalDateKey()) {
+    const now = new Date();
+    slots = slots.filter((time) => {
+      const slotDate = new Date(`${dateStr}T${time}:00`);
+      return slotDate > now;
+    });
+  }
   
   return slots;
 };
 
 // Obtener fecha mínima (hoy o mañana si ya pasó la hora de cierre)
 const getMinDate = () => {
-  const now = new Date();
-  const today = now.toISOString().split('T')[0];
-  return today;
+  const today = toLocalDateKey();
+  const todaySlots = getAvailableTimeSlots(today);
+
+  if (todaySlots.length > 0) {
+    return today;
+  }
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return toLocalDateKey(tomorrow);
 };
 
-export default function HFCheckout({ onNavigate, cart: propCart, onSubmit, isProcessing }) {
+export default function HFCheckout({ onNavigate, cart: propCart, onSubmit, isProcessing, user }) {
   const [step, setStep] = React.useState(1);
   const [formData, setFormData] = React.useState({
     nombre: '',
@@ -87,6 +112,18 @@ export default function HFCheckout({ onNavigate, cart: propCart, onSubmit, isPro
   });
   const [errors, setErrors] = React.useState({});
   const [availableSlots, setAvailableSlots] = React.useState([]);
+
+  // Prefiller datos del usuario si está disponible
+  React.useEffect(() => {
+    if (user && user.name && !formData.nombre) {
+      setFormData(prev => ({
+        ...prev,
+        nombre: user.name || '',
+        email: user.email || '',
+        telefono: user.telefono || ''
+      }));
+    }
+  }, [user]);
 
   // Actualizar horarios disponibles cuando cambie la fecha
   React.useEffect(() => {
@@ -115,8 +152,7 @@ export default function HFCheckout({ onNavigate, cart: propCart, onSubmit, isPro
   });
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const tax = subtotal * 0.13;
-  const total = subtotal + tax;
+  const total = subtotal;
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
@@ -207,6 +243,9 @@ export default function HFCheckout({ onNavigate, cart: propCart, onSubmit, isPro
         telefono: telefonoLimpio,
         email: formData.email.trim() || undefined,
         notas: formData.notas.trim() || undefined,
+        location: 'Avenida de las Ciencias, 49, Madrid',
+        ubicacion: 'Avenida de las Ciencias, 49, Madrid',
+        direccion: 'Avenida de las Ciencias, 49, Madrid',
         hora_recogida: pickupDate.toISOString(),
         metodo_pago: 'efectivo' // Por defecto
       });

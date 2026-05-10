@@ -6,7 +6,6 @@ export default function HFRegister({ onNavigate, onRegister, isLoading = false, 
     nombre: '',
     email: '',
     telefono: '',
-    cedula: '',
     password: '',
     confirmPassword: ''
   });
@@ -36,7 +35,6 @@ export default function HFRegister({ onNavigate, onRegister, isLoading = false, 
     { icon: User, label: 'Nombre Completo', type: 'text', placeholder: 'Juan Pérez', field: 'nombre' },
     { icon: Mail, label: 'Email', type: 'email', placeholder: 'tu@email.com', field: 'email' },
     { icon: Phone, label: 'Teléfono', type: 'tel', placeholder: '+506 8888-8888', field: 'telefono' },
-    { icon: CreditCard, label: 'Cédula', type: 'text', placeholder: '1-0000-0000', field: 'cedula' },
     { icon: Lock, label: 'Contraseña', type: 'password', placeholder: '••••••••', field: 'password' },
     { icon: Lock, label: 'Confirmar Contraseña', type: 'password', placeholder: '••••••••', field: 'confirmPassword' },
   ];

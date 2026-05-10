@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HFCart from '../../../components/design-system/high-fidelity/HFCart';
 import HFCartEmpty from '../../../components/design-system/high-fidelity/HFCartEmpty';
@@ -10,24 +11,137 @@ import { useCart } from '../../context/CartContext';
 
 export const CartPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const { refreshCart } = useCart();
+  const { isAuthenticated, user } = useAuth();
+  const { refreshCart, clearCart } = useCart();
   const [cart, setCart] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [frecuentProducts, setFrecuentProducts] = useState([]);
+  const [resumeMessage, setResumeMessage] = useState(null);
+  const [stockWarnings, setStockWarnings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
+  const cartSnapshotRef = useRef(null);
+
+  const getAbandonedCartKey = () => {
+    const storageId = user?.id || user?.email || 'guest';
+    return `panaderia-puri:abandoned-cart:${storageId}`;
+  };
+
+  const normalizeCartItems = (cartData) => {
+    const rawItems = cartData?.items || cartData?.productos || [];
+
+    return rawItems.map((item) => {
+      const producto = item.producto || item;
+      const stockValue = producto.stock ?? item.stock ?? item.existencia ?? item.existencias;
+      const parsedStock = stockValue === null || stockValue === undefined || stockValue === ''
+        ? null
+        : Number(stockValue);
+
+      return {
+        id: item.id || item._id,
+        productoId: producto._id || producto.id || item.productoId,
+        name: producto.name || producto.nombre || item.name || item.nombre,
+        price: producto.price || producto.precio || item.price || item.precio || 0,
+        quantity: item.quantity || item.cantidad || 1,
+        image: producto.image || producto.imagen_url || producto.imagen || item.image,
+        emoji: producto.emoji || item.emoji,
+        description: producto.description || producto.descripcion || item.description,
+        stock: Number.isFinite(parsedStock) ? parsedStock : null
+      };
+    });
+  };
+
+  const readAbandonedSnapshot = () => {
+    try {
+      const rawSnapshot = localStorage.getItem(getAbandonedCartKey());
+      if (!rawSnapshot) {
+        return null;
+      }
+
+      return JSON.parse(rawSnapshot);
+    } catch (error) {
+      console.warn('No se pudo leer el carrito abandonado:', error);
+      return null;
+    }
+  };
+
+  const updateAbandonedNotice = () => {
+    const snapshot = readAbandonedSnapshot();
+
+    if (snapshot?.totalItems > 0) {
+      setResumeMessage(`Has dejado ${snapshot.totalItems} producto${snapshot.totalItems === 1 ? '' : 's'} sin comprar`);
+    } else {
+      setResumeMessage(null);
+    }
+  };
+
+  const saveAbandonedSnapshot = () => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const currentCart = cartSnapshotRef.current || cart;
+    const items = normalizeCartItems(currentCart);
+
+    if (items.length === 0) {
+      return;
+    }
+
+    const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const totalAmount = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (item.quantity || 1), 0);
+
+    localStorage.setItem(getAbandonedCartKey(), JSON.stringify({
+      totalItems,
+      totalAmount,
+      savedAt: new Date().toISOString()
+    }));
+  };
+
+  const clearAbandonedSnapshot = () => {
+    localStorage.removeItem(getAbandonedCartKey());
+    setResumeMessage(null);
+  };
 
   useEffect(() => {
     loadSuggestions();
     if (isAuthenticated) {
       loadCart();
       loadFrecuentProducts();
+      updateAbandonedNotice();
     } else {
       setIsLoading(false);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    cartSnapshotRef.current = cart;
+  }, [cart]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return undefined;
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveAbandonedSnapshot();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      saveAbandonedSnapshot();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      saveAbandonedSnapshot();
+    };
+  }, [isAuthenticated, user?.id, user?.email]);
 
   const loadFrecuentProducts = async () => {
     try {
@@ -55,12 +169,16 @@ export const CartPage = () => {
       setIsLoading(true);
       setError(null);
       const response = await carritoService.get();
-      setCart(response.data || response);
+      const cartData = response.data || response;
+      setCart(cartData);
+      const normalizedItems = normalizeCartItems(cartData);
+      setStockWarnings(normalizedItems.filter((item) => item.stock !== null && (item.stock <= 0 || item.quantity > item.stock)));
     } catch (err) {
       console.error('Error al cargar carrito:', err);
       // Si es 404, el carrito está vacío
       if (err.status === 404) {
         setCart({ items: [] });
+        setStockWarnings([]);
       } else {
         setError(err.message || 'Error al cargar el carrito');
       }
@@ -90,9 +208,16 @@ export const CartPage = () => {
   };
 
   const handleClearCart = async () => {
+    const shouldClear = window.confirm('¿Seguro que quieres vaciar el carrito?');
+    if (!shouldClear) {
+      return;
+    }
+
     try {
-      await carritoService.clear();
+      await clearCart();
       setCart({ items: [] });
+      setStockWarnings([]);
+      clearAbandonedSnapshot();
     } catch (err) {
       console.error('Error al vaciar carrito:', err);
       alert(err.message || 'Error al vaciar el carrito');
@@ -110,6 +235,15 @@ export const CartPage = () => {
     if (route) {
       navigate(route);
     }
+  };
+
+  const handleNavigateWithParams = (screenId, payload) => {
+    if (screenId === 'product-detail' && payload) {
+      navigate(`/product/${payload}`);
+      return;
+    }
+
+    handleNavigate(screenId);
   };
 
   const handleAddToCart = async (product) => {
@@ -146,7 +280,7 @@ export const CartPage = () => {
   if (!isAuthenticated) {
     return (
       <HFCartEmpty 
-        onNavigate={handleNavigate}
+        onNavigate={handleNavigateWithParams}
         suggestions={suggestions}
         onAddToCart={handleAddToCart}
         message="Inicia sesión para ver tu carrito"
@@ -171,11 +305,16 @@ export const CartPage = () => {
   // Verificar si el carrito está vacío
   const cartItems = cart?.items || cart?.productos || [];
   if (!cartItems.length) {
+    const snapshot = readAbandonedSnapshot();
+
     return (
       <HFCartEmpty 
-        onNavigate={handleNavigate} 
+        onNavigate={handleNavigateWithParams} 
         suggestions={suggestions}
         onAddToCart={handleAddToCart}
+        resumeMessage={snapshot?.totalItems > 0
+          ? `Has dejado ${snapshot.totalItems} producto${snapshot.totalItems === 1 ? '' : 's'} sin comprar`
+          : resumeMessage}
       />
     );
   }
@@ -205,13 +344,16 @@ export const CartPage = () => {
       )}
       <HFCart
         cart={cart}
-        onNavigate={handleNavigate}
+        onNavigate={handleNavigateWithParams}
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
         onClearCart={handleClearCart}
+        suggestions={suggestions}
         frecuentProducts={frecuentProducts}
         onAddFrequentProduct={handleAddFrequentProduct}
         isAuthenticated={isAuthenticated}
+        resumeMessage={resumeMessage}
+        stockWarnings={stockWarnings}
       />
     </>
   );

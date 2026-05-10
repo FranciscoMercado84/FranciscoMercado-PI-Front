@@ -10,7 +10,7 @@ import { useCart } from '../../context/CartContext';
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { clearCart } = useCart();
   const [cart, setCart] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,6 +121,7 @@ export const CheckoutPage = () => {
       onNavigate={handleNavigate}
       onSubmit={handleSubmit}
       isProcessing={isProcessing}
+      user={user}
     />
   );
 };

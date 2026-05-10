@@ -1,4 +1,6 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { jsPDF } from 'jspdf';
 import { Package, Calendar, Clock, MapPin, CheckCircle, Download, X, ArrowLeft, AlertCircle, Loader } from 'lucide-react';
 
 // Configuración de estados (valores del backend: Pendiente, En preparación, Listo, Entregado, Cancelado)
@@ -19,18 +21,19 @@ const defaultOrder = {
   status: 'completed',
   date: '5 de Enero, 2026',
   pickupTime: '14:00 - 15:00',
-  location: 'Av. Central, San José',
+  location: 'Avenida de las Ciencias, 49, Madrid',
   items: [
     { name: 'Baguette Francesa', qty: 2, price: 3.50 },
     { name: 'Croissant Mantequilla', qty: 3, price: 2.80 },
     { name: 'Pan Integral', qty: 1, price: 4.20 }
   ],
   subtotal: 19.60,
-  tax: 2.55,
   total: 22.15
 };
 
 export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = false, onStatusChange }) {
+  const navigate = useNavigate();
+  
   // Normalizar el pedido
   const normalizeOrder = (o) => {
     if (!o) return defaultOrder;
@@ -48,8 +51,7 @@ export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = 
     
     // Calcular totales
     const subtotal = o.subtotal || items.reduce((sum, item) => sum + (item.qty * item.price), 0);
-    const tax = o.tax || o.impuesto || o.iva || (subtotal * 0.13);
-    const total = o.total || (subtotal + tax);
+    const total = o.total || subtotal;
     
     // Formatear fecha
     let dateFormatted = o.date || o.fecha;
@@ -84,10 +86,9 @@ export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = 
       status: o.status || o.estado || 'pending',
       date: dateFormatted || 'Fecha no disponible',
       pickupTime: pickupTimeFormatted,
-      location: o.location || o.ubicacion || o.direccion || 'Av. Central, San José',
+      location: o.location || o.ubicacion || o.direccion || 'Avenida de las Ciencias, 49',
       items,
       subtotal,
-      tax,
       total,
       cliente: o.nombre_cliente || o.cliente || o.usuario?.nombre || 'Cliente',
       telefono: o.telefono || ''
@@ -97,6 +98,171 @@ export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = 
   const order = normalizeOrder(propOrder);
   const status = statusConfig[order.status] || statusConfig['Pendiente'];
   const StatusIcon = status.icon;
+
+  const formatOrderDate = (dateValue) => {
+    if (!dateValue) return 'Fecha no disponible';
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return 'Fecha no disponible';
+
+    return date.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const handleDownloadReceipt = () => {
+    try {
+      // Crear documento PDF
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Configurar estilos
+      const primaryColor = [139, 77, 38]; // Color marrón de la panadería
+      const darkColor = [33, 33, 33];
+      const lightColor = [220, 220, 220];
+      let yPosition = 15;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 15;
+      const contentWidth = pageWidth - (margin * 2);
+
+      const ensureSpace = (requiredHeight = 12) => {
+        if (yPosition > pageHeight - requiredHeight) {
+          doc.addPage();
+          yPosition = 20;
+        }
+      };
+
+      // Encabezado
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, 0, pageWidth, 30, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('PANADERÍA PURI', margin, 15);
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text('Recibo de Pedido', margin, 23);
+
+      yPosition = 40;
+
+      // Información del pedido
+      ensureSpace(20);
+      doc.setTextColor(...darkColor);
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('Detalle del pedido', margin, yPosition);
+      yPosition += 8;
+
+      // Línea separadora
+      doc.setDrawColor(...lightColor);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 5;
+
+      // Detalles del cliente
+      ensureSpace(30);
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Cliente: ${order.cliente}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Teléfono: ${order.telefono || 'No especificado'}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Email: ${order.email || 'No especificado'}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Estado: ${status.label}`, margin, yPosition);
+      yPosition += 10;
+
+      // Información de recogida
+      ensureSpace(30);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(10);
+      doc.text('INFORMACIÓN DE RECOGIDA', margin, yPosition);
+      yPosition += 6;
+      doc.setFont(undefined, 'normal');
+      doc.text(`Fecha: ${order.date}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Hora: ${order.pickupTime}`, margin, yPosition);
+      yPosition += 6;
+      doc.text(`Ubicación: ${order.location}`, margin, yPosition);
+      yPosition += 10;
+
+      // Línea separadora
+      ensureSpace(20);
+      doc.setDrawColor(...lightColor);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 8;
+
+      // Tabla de productos
+      ensureSpace(20);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(10);
+      doc.text('PRODUCTOS', margin, yPosition);
+      yPosition += 8;
+
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(9);
+      
+      // Encabezados de tabla
+      const col1X = margin;
+      const col2X = pageWidth - margin - 50;
+      const col3X = pageWidth - margin - 25;
+      
+      doc.setFont(undefined, 'bold');
+      doc.text('Producto', col1X, yPosition);
+      doc.text('Cant.', col2X, yPosition);
+      doc.text('Precio', col3X, yPosition);
+      yPosition += 6;
+      
+      doc.setDrawColor(...lightColor);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 4;
+
+      // Items
+      doc.setFont(undefined, 'normal');
+      order.items.forEach((item) => {
+        ensureSpace(15);
+        const itemTotal = (item.qty * item.price).toFixed(2);
+        doc.text(item.name.substring(0, 35), col1X, yPosition);
+        doc.text(String(item.qty), col2X, yPosition);
+        doc.text(`€${itemTotal}`, col3X, yPosition);
+        yPosition += 6;
+      });
+
+      // Línea separadora
+      ensureSpace(20);
+      yPosition += 2;
+      doc.setDrawColor(...lightColor);
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 8;
+
+      // Total
+      ensureSpace(20);
+      doc.setFont(undefined, 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...primaryColor);
+      doc.text('TOTAL', col1X, yPosition);
+      doc.text(`€${order.total.toFixed(2)}`, col3X, yPosition, { align: 'right' });
+      yPosition += 12;
+
+      // Footer
+      const footerY = pageHeight - 10;
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(8);
+      doc.text('Gracias por tu compra. ¡Nos vemos pronto!', pageWidth / 2, footerY, { align: 'center' });
+      const timestamp = new Date().toLocaleString('es-ES');
+      doc.text(`Descargado: ${timestamp}`, pageWidth / 2, footerY + 5, { align: 'center' });
+
+      // Descargar PDF
+      doc.save(`recibo-pedido-${Date.now()}.pdf`);
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+      alert('Error al descargar el recibo. Por favor intenta de nuevo.');
+    }
+  };
 
   return (
     <div style={{
@@ -124,7 +290,7 @@ export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = 
               color: 'var(--color-neutral-900)',
               marginBottom: 'var(--space-2)'
             }}>
-              Pedido #{String(order.id).slice(-8).toUpperCase()}
+              Detalle del pedido
             </h1>
             <div style={{
               display: 'inline-flex',
@@ -142,7 +308,9 @@ export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = 
               {status.label}
             </div>
           </div>
-          <button style={{
+          <button
+          onClick={handleDownloadReceipt}
+          style={{
             padding: 'var(--space-3) var(--space-5)',
             background: 'white',
             border: '2px solid var(--color-neutral-300)',
@@ -282,26 +450,6 @@ export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = 
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
-              marginBottom: 'var(--space-3)',
-              fontSize: 'var(--font-size-body-m)',
-              color: 'var(--color-neutral-700)'
-            }}>
-              <span>Subtotal:</span>
-              <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>${order.subtotal.toFixed(2)}</span>
-            </div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: 'var(--space-4)',
-              fontSize: 'var(--font-size-body-m)',
-              color: 'var(--color-neutral-700)'
-            }}>
-              <span>IVA (13%):</span>
-              <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>${order.tax.toFixed(2)}</span>
-            </div>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
               paddingTop: 'var(--space-4)',
               borderTop: '2px solid var(--color-neutral-900)',
               fontSize: 'var(--font-size-h4)',
@@ -433,7 +581,7 @@ export default function HFOrderDetail({ order: propOrder, onNavigate, isAdmin = 
             </button>
           ) : (
             <button 
-            onClick={() => onNavigate?.('cart')}
+            onClick={() => navigate('/catalog')}
             style={{
               padding: 'var(--space-4) var(--space-8)',
               background: 'var(--color-primary)',

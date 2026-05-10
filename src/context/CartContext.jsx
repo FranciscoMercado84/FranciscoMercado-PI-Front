@@ -4,6 +4,16 @@ import { useAuth } from './AuthContext';
 
 const CartContext = createContext(null);
 
+const ABANDONED_CART_PREFIX = 'panaderia-puri:abandoned-cart:';
+
+const clearAbandonedCartSnapshots = () => {
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith(ABANDONED_CART_PREFIX)) {
+      localStorage.removeItem(key);
+    }
+  });
+};
+
 export const CartProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const [cart, setCart] = useState({ items: [], total: 0 });
@@ -98,6 +108,7 @@ export const CartProvider = ({ children }) => {
       await carritoService.clear();
       setCart({ items: [], total: 0 });
       setCartCount(0);
+      clearAbandonedCartSnapshots();
       return true;
     } catch (err) {
       console.error('Error al limpiar carrito:', err);

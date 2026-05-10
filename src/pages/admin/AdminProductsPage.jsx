@@ -17,7 +17,7 @@ export const AdminProductsPage = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await productService.getAll();
+      const response = await productService.getAllAdmin();
       // La respuesta puede ser un array directamente o estar en response.data
       const productsData = Array.isArray(response) ? response : (response.data || response.productos || []);
       setProducts(productsData);
@@ -32,6 +32,17 @@ export const AdminProductsPage = () => {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  const handleToggleAvailable = async (productId, disponible) => {
+    try {
+      await productService.update(productId, { disponible });
+      // Recargar la lista para reflejar el cambio (producto desaparecerá si queda no disponible)
+      loadProducts();
+    } catch (err) {
+      console.error('Error al actualizar disponibilidad:', err);
+      alert('No se pudo actualizar la disponibilidad: ' + (err.message || 'Error'));
+    }
+  };
 
   const handleDelete = async (productId) => {
     if (!window.confirm('¿Estás seguro de que deseas eliminar este producto?')) {
@@ -52,7 +63,8 @@ export const AdminProductsPage = () => {
     if (screenId === 'edit-product' && productId) {
       navigate(`/admin/products/edit/${productId}`);
     } else if (screenId === 'view-product' && productId) {
-      navigate(`/admin/products/${productId}`);
+      // No existe ruta de detalle admin, redirigimos a la edición como vista rápida
+      navigate(`/admin/products/edit/${productId}`);
     } else {
       const routes = {
         'product-form': '/admin/products/new',
@@ -93,6 +105,6 @@ export const AdminProductsPage = () => {
     );
   }
 
-  return <HFAdminProducts products={products} onNavigate={handleNavigate} onDelete={handleDelete} />;
+  return <HFAdminProducts products={products} onNavigate={handleNavigate} onDelete={handleDelete} onToggleAvailable={handleToggleAvailable} />;
 };
 

@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { Mail, Lock, ArrowRight, Loader } from 'lucide-react';
 
+// Establecer título de la página
+if (typeof document !== 'undefined') {
+  document.title = 'Iniciar Sesión - Panadería Puri';
+}
+
 export default function HFLogin({ onNavigate, onLogin, isLoading = false, error = null }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

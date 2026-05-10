@@ -59,7 +59,7 @@ export const OrderDetailPage = () => {
   if (error) {
     return (
       <ErrorState
-        title="Error al cargar el pedido"
+        title="No se pudo abrir el pedido"
         message={error}
         onRetry={() => window.location.reload()}
       />

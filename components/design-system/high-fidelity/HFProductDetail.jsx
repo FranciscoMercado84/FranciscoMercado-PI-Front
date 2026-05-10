@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Minus, Plus, ShoppingCart, Info } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Info } from 'lucide-react';
 
 // Producto por defecto cuando no se pasa prop
 const defaultProduct = {
@@ -141,36 +141,6 @@ export default function HFProductDetail({ onNavigate, product: propProduct, onAd
               ) : (
                 <span>{product.emoji}</span>
               )}
-              <button style={{
-                position: 'absolute',
-                top: 'var(--space-4)',
-                right: 'var(--space-4)',
-                width: '44px',
-                height: '44px',
-                borderRadius: 'var(--radius-full)',
-                background: 'white',
-                border: '1px solid var(--color-neutral-300)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: 'var(--color-error)',
-                transition: 'all 0.2s',
-                boxShadow: 'var(--shadow-sm)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-error)';
-                e.currentTarget.style.color = 'white';
-                e.currentTarget.style.transform = 'scale(1.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'white';
-                e.currentTarget.style.color = 'var(--color-error)';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-              >
-                <Heart size={20} />
-              </button>
             </div>
           </div>
 

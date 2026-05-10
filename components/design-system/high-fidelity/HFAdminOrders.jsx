@@ -17,15 +17,20 @@ export default function HFAdminOrders({ orders: propOrders, onNavigate }) {
   const normalizeOrder = (o) => {
     // Formatear fecha
     let dateFormatted = o.date || o.fecha;
-    if (o.createdAt || o.fechaCreacion) {
-      const d = new Date(o.createdAt || o.fechaCreacion);
-      dateFormatted = d.toLocaleString('es-ES', { 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+    // Guardar fecha original en ISO si está disponible para cálculos fiables
+    let rawDate = null;
+    if (o.createdAt || o.fechaCreacion || o.created_at || o.date) {
+      const d = new Date(o.createdAt || o.fechaCreacion || o.created_at || o.date);
+      if (!isNaN(d.getTime())) {
+        rawDate = d.toISOString();
+        dateFormatted = d.toLocaleString('es-ES', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
     }
 
     // Calcular items
@@ -36,6 +41,7 @@ export default function HFAdminOrders({ orders: propOrders, onNavigate }) {
       id: o.id || o._id || o.orderId,
       customer: o.customer || o.cliente || o.usuario?.nombre || 'Cliente',
       date: dateFormatted || 'Fecha no disponible',
+      rawDate,
       items: itemCount,
       total: o.total || 0,
       status: o.status || o.estado || 'pending'
@@ -58,12 +64,12 @@ export default function HFAdminOrders({ orders: propOrders, onNavigate }) {
   const today = new Date().toDateString();
   const ordersToday = orders.filter(o => {
     try {
-      const orderDate = new Date(o.date);
+      const orderDate = new Date(o.rawDate || o.date);
       return orderDate.toDateString() === today;
     } catch {
       return false;
     }
-  }).length || orders.length; // Fallback to all orders if date parsing fails
+  }).length; // no fallback to total orders
 
   const pendingOrders = orders.filter(o => o.status === 'Pendiente' || o.status === 'pending' || o.status === 'pendiente').length;
   const completedOrders = orders.filter(o => o.status === 'Entregado' || o.status === 'completed' || o.status === 'completado' || o.status === 'entregado').length;
@@ -179,9 +185,9 @@ export default function HFAdminOrders({ orders: propOrders, onNavigate }) {
           onChange={(e) => setStatusFilter(e.target.value)}
           style={{
           padding: 'var(--space-3) var(--space-5)',
-          background: 'var(--color-secondary)',
-          color: 'white',
-          border: 'none',
+          background: 'white',
+          color: 'var(--color-neutral-900)',
+          border: '1px solid var(--color-neutral-300)',
           borderRadius: 'var(--radius-lg)',
           fontSize: 'var(--font-size-body-m)',
           fontWeight: 'var(--font-weight-semibold)',

@@ -25,7 +25,7 @@ const categoryEmojis = {
   'default': '🥯'
 };
 
-export default function HFCartEmpty({ onNavigate, suggestions: propSuggestions, onAddToCart }) {
+export default function HFCartEmpty({ onNavigate, suggestions: propSuggestions, onAddToCart, resumeMessage = null, message = null }) {
   // Normalizar sugerencias del backend
   const normalizedSuggestions = (propSuggestions && propSuggestions.length > 0)
     ? propSuggestions.slice(0, 4).map(p => ({
@@ -49,6 +49,23 @@ export default function HFCartEmpty({ onNavigate, suggestions: propSuggestions, 
         padding: 'var(--space-12) var(--space-6)',
         textAlign: 'center'
       }}>
+        {resumeMessage && (
+          <div style={{
+            marginBottom: 'var(--space-6)',
+            background: 'white',
+            border: '1px solid var(--color-neutral-300)',
+            borderRadius: 'var(--radius-xl)',
+            padding: 'var(--space-4) var(--space-5)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+            color: 'var(--color-neutral-900)'
+          }}>
+            <ShoppingBag size={18} style={{ color: 'var(--color-warning, #d97706)' }} />
+            <span style={{ fontWeight: 'var(--font-weight-medium)' }}>{resumeMessage}</span>
+          </div>
+        )}
+
         {/* Empty State */}
         <div style={{
           background: 'white',
@@ -89,7 +106,7 @@ export default function HFCartEmpty({ onNavigate, suggestions: propSuggestions, 
             margin: '0 auto var(--space-8)',
             lineHeight: 1.6
           }}>
-            Parece que aún no has agregado nada a tu carrito. ¡Descubre nuestros deliciosos productos!
+            {message || 'Parece que aún no has agregado nada a tu carrito. ¡Descubre nuestros deliciosos productos!'}
           </p>
 
           <button 
@@ -153,6 +170,7 @@ export default function HFCartEmpty({ onNavigate, suggestions: propSuggestions, 
                   transition: 'all 0.3s',
                   cursor: 'pointer'
                 }}
+                onClick={() => onNavigate?.('product-detail', product.id)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
                   e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
@@ -164,13 +182,30 @@ export default function HFCartEmpty({ onNavigate, suggestions: propSuggestions, 
               >
                 <div style={{
                   aspectRatio: '1/1',
-                  background: product.image ? `url(${product.image}) center/cover` : 'var(--color-neutral-200)',
+                  background: 'var(--color-neutral-200)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '56px'
+                  fontSize: '56px',
+                  overflow: 'hidden'
                 }}>
-                  {!product.image && product.emoji}
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        padding: 'var(--space-3)'
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    product.emoji
+                  )}
                 </div>
                 <div style={{ padding: 'var(--space-4)' }}>
                   <h3 style={{

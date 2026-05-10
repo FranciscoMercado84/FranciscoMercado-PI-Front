@@ -105,53 +105,43 @@ export default function HFCheckoutStep1({ onNavigate }) {
               Completa tus datos para procesar el pedido
             </p>
 
-            <div style={{ display: 'grid', gap: 'var(--space-5)' }}>
-              {/* Name Fields */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 'var(--space-4)'
-              }}>
-                {['Nombre', 'Apellido'].map((label) => (
-                  <div key={label}>
-                    <label style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-2)',
-                      fontSize: 'var(--font-size-body-m)',
-                      fontWeight: 'var(--font-weight-medium)',
-                      color: 'var(--color-neutral-900)',
-                      marginBottom: 'var(--space-2)'
-                    }}>
-                      <User size={18} style={{ color: 'var(--color-primary)' }} />
-                      {label}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={`Tu ${label.toLowerCase()}`}
-                      style={{
-                        width: '100%',
-                        padding: 'var(--space-3) var(--space-4)',
-                        border: '2px solid var(--color-neutral-300)',
-                        borderRadius: 'var(--radius-lg)',
-                        fontSize: 'var(--font-size-body-m)',
-                        outline: 'none',
-                        transition: 'all 0.2s'
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--color-primary)';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px var(--color-primary-light)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--color-neutral-300)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    />
+              <div style={{ marginBottom: 'var(--space-5)' }}>
+                {[
+                  { name: 'Baguette', qty: 2, price: 7.00 },
+                  { name: 'Croissant', qty: 3, price: 8.40 },
+                  { name: 'Pan Integral', qty: 1, price: 4.20 }
+                ].map((item, i) => (
+                  <div key={i} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginBottom: 'var(--space-3)',
+                    fontSize: 'var(--font-size-body-s)',
+                    color: 'var(--color-neutral-700)'
+                  }}>
+                    <span>{item.name} x{item.qty}</span>
+                    <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>
+                      ${item.price.toFixed(2)}
+                    </span>
                   </div>
                 ))}
               </div>
 
-              {/* Email */}
+              <div style={{
+                paddingTop: 'var(--space-4)',
+                borderTop: '1px solid var(--color-neutral-300)',
+                marginBottom: 'var(--space-4)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 'var(--font-size-body-m)'
+                }}>
+                  <span style={{ color: 'var(--color-neutral-700)' }}>Total:</span>
+                  <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>$19.60</span>
+                </div>
+              </div>
+
+              <div style={{
               <div>
                 <label style={{
                   display: 'flex',
@@ -392,32 +382,18 @@ export default function HFCheckoutStep1({ onNavigate }) {
                   { name: 'Croissant', qty: 3, price: 8.40 },
                   { name: 'Pan Integral', qty: 1, price: 4.20 }
                 ].map((item, i) => (
-                  <div key={i} style={{
+                  <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     marginBottom: 'var(--space-3)',
-                    fontSize: 'var(--font-size-body-s)',
+                    fontSize: 'var(--font-size-body-m)',
                     color: 'var(--color-neutral-700)'
                   }}>
-                    <span>{item.name} x{item.qty}</span>
+                    <span>Total:</span>
                     <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>
-                      ${item.price.toFixed(2)}
+                      ${total.toFixed(2)}
                     </span>
                   </div>
-                ))}
-              </div>
-
-              <div style={{
-                paddingTop: 'var(--space-4)',
-                borderTop: '1px solid var(--color-neutral-300)',
-                marginBottom: 'var(--space-4)'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 'var(--space-2)',
-                  fontSize: 'var(--font-size-body-m)'
-                }}>
                   <span style={{ color: 'var(--color-neutral-700)' }}>Subtotal:</span>
                   <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>$19.60</span>
                 </div>

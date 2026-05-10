@@ -1,6 +1,11 @@
 import React from 'react';
 import { Package, Clock, CheckCircle, XCircle, ChevronRight, Truck } from 'lucide-react';
 
+// Establecer título de la página
+if (typeof document !== 'undefined') {
+  document.title = 'Mis Pedidos - Panadería Puri';
+}
+
 // Pedidos por defecto cuando no se pasan props
 const defaultOrders = [
   { id: 'ORD-285', date: '2026-01-05', status: 'completed', total: 22.15, items: 3 },
@@ -28,6 +33,18 @@ export default function HFOrderHistory({ onNavigate, orders: propOrders }) {
   const totalOrders = orders.length;
   const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'completado' || o.status === 'entregado').length;
   const totalSpent = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+  const formatOrderDate = (dateValue) => {
+    if (!dateValue) return 'Fecha no disponible';
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return 'Fecha no disponible';
+
+    return date.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
 
   const getStatusConfig = (status) => {
     const statusLower = (status || '').toLowerCase();
@@ -209,9 +226,9 @@ export default function HFOrderHistory({ onNavigate, orders: propOrders }) {
                       fontSize: 'var(--font-size-h6)',
                       fontWeight: 'var(--font-weight-semibold)',
                       color: 'var(--color-neutral-900)',
-                      fontFamily: 'monospace'
+                      margin: 0
                     }}>
-                      {order.id}
+                      Pedido del {formatOrderDate(order.date)}
                     </h3>
                     <div style={{
                       display: 'inline-flex',

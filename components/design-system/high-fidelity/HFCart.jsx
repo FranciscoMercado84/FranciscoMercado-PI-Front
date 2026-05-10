@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Plus, Minus, ArrowRight, Tag, RefreshCw, ShoppingBag } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight, RefreshCw, ShoppingBag, ChevronRight } from 'lucide-react';
 
 // Items por defecto cuando no se pasan props
 const defaultCartItems = [
@@ -7,6 +7,11 @@ const defaultCartItems = [
   { id: 2, name: 'Croissant Mantequilla', price: 2.80, quantity: 3, emoji: '🥐' },
   { id: 3, name: 'Pan Integral', price: 4.20, quantity: 1, emoji: '🍞' },
 ];
+
+// Establecer título de la página
+if (typeof document !== 'undefined') {
+  document.title = 'Carrito - Panadería Puri';
+}
 
 // Mapa de emojis por categoría (sincronizado con backend)
 const categoryEmojis = {
@@ -29,9 +34,12 @@ export default function HFCart({
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
+  suggestions = [],
   frecuentProducts = [],
   onAddFrequentProduct,
-  isAuthenticated = false
+  isAuthenticated = false,
+  resumeMessage = null,
+  stockWarnings = []
 }) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -45,6 +53,11 @@ export default function HFCart({
   // Normalizar items del carrito
   const normalizeCartItem = (item) => {
     const producto = item.producto || item;
+    const stockValue = producto.stock ?? item.stock ?? item.existencia ?? item.existencias;
+    const parsedStock = stockValue === null || stockValue === undefined || stockValue === ''
+      ? null
+      : Number(stockValue);
+
     return {
       id: item.id || item._id,
       productoId: producto._id || producto.id || item.productoId,
@@ -53,7 +66,8 @@ export default function HFCart({
       quantity: item.quantity || item.cantidad || 1,
       image: producto.image || producto.imagen_url || producto.imagen || item.image,
       emoji: producto.emoji || categoryEmojis[producto.category || producto.categoria] || categoryEmojis.default,
-      description: producto.description || producto.descripcion || item.description
+      description: producto.description || producto.descripcion || item.description,
+      stock: Number.isFinite(parsedStock) ? parsedStock : null
     };
   };
 
@@ -62,8 +76,31 @@ export default function HFCart({
   const cartItems = Array.isArray(rawItems) ? rawItems.map(normalizeCartItem) : [];
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const tax = subtotal * 0.13;
-  const total = subtotal + tax;
+  const total = subtotal;
+
+  const normalizeSuggestion = (product) => {
+    const source = product.producto || product;
+    const category = source.category || source.categoria;
+
+    return {
+      id: source.id || source._id,
+      name: source.name || source.nombre || 'Producto',
+      price: source.price || source.precio || 0,
+      image: source.image || source.imagen || source.imagen_url,
+      emoji: source.emoji || categoryEmojis[category] || categoryEmojis.default
+    };
+  };
+
+  const normalizedSuggestions = (suggestions.length > 0 ? suggestions : defaultCartItems)
+    .slice(0, 4)
+    .map(normalizeSuggestion);
+
+  const handleViewProduct = (item) => {
+    const productId = item.productoId || item.id;
+    if (productId) {
+      onNavigate?.('product-detail', productId);
+    }
+  };
 
   const handleQuantityChange = (item, delta) => {
     const newQuantity = item.quantity + delta;
@@ -71,10 +108,14 @@ export default function HFCart({
       if (onRemoveItem) {
         onRemoveItem(item.id);
       }
+    } else if (delta > 0 && item.stock !== null && item.quantity >= item.stock) {
+      return;
     } else if (onUpdateQuantity) {
       onUpdateQuantity(item.id, newQuantity);
     }
   };
+
+  const hasCartWarnings = stockWarnings.length > 0;
 
   return (
     <div style={{
@@ -103,6 +144,50 @@ export default function HFCart({
         }}>
           {cartItems.length} producto{cartItems.length !== 1 ? 's' : ''} en tu carrito
         </p>
+
+        {(resumeMessage || hasCartWarnings) && (
+          <div style={{
+            background: 'white',
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid var(--color-neutral-300)',
+            padding: 'var(--space-4) var(--space-5)',
+            marginBottom: 'var(--space-6)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-3)'
+          }}>
+            {resumeMessage && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-3) var(--space-4)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--color-warning-light, #fef3c7)',
+                color: 'var(--color-neutral-900)'
+              }}>
+                <ShoppingBag size={18} style={{ color: 'var(--color-warning, #d97706)' }} />
+                <span style={{ fontWeight: 'var(--font-weight-medium)' }}>{resumeMessage}</span>
+              </div>
+            )}
+            {hasCartWarnings && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-3) var(--space-4)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--color-error-light, #fee2e2)',
+                color: 'var(--color-neutral-900)'
+              }}>
+                <AlertCircle size={18} style={{ color: 'var(--color-error, #dc2626)' }} />
+                <span style={{ fontWeight: 'var(--font-weight-medium)' }}>
+                  Hay {stockWarnings.length} producto{stockWarnings.length !== 1 ? 's' : ''} con stock limitado o agotado.
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={{
           display: 'grid',
@@ -161,15 +246,36 @@ export default function HFCart({
                   </div>
 
                   {/* Product Info */}
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{
-                      fontSize: 'var(--font-size-h6)',
-                      fontWeight: 'var(--font-weight-semibold)',
-                      color: 'var(--color-neutral-900)',
-                      marginBottom: 'var(--space-1)'
-                    }}>
-                      {item.name}
-                    </h3>
+                  <div
+                    style={{ flex: 1, cursor: 'pointer' }}
+                    onClick={() => handleViewProduct(item)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-1)', flexWrap: 'wrap' }}>
+                      <h3 style={{
+                        fontSize: 'var(--font-size-h6)',
+                        fontWeight: 'var(--font-weight-semibold)',
+                        color: 'var(--color-neutral-900)',
+                        margin: 0
+                      }}>
+                        {item.name}
+                      </h3>
+                      {item.stock !== null && (
+                        <span style={{
+                          padding: 'var(--space-1) var(--space-2)',
+                          borderRadius: 'var(--radius-full)',
+                          background: item.stock <= 0 || item.quantity > item.stock
+                            ? 'var(--color-error-light, #fee2e2)'
+                            : 'var(--color-warning-light, #fef3c7)',
+                          color: item.stock <= 0 || item.quantity > item.stock
+                            ? 'var(--color-error, #dc2626)'
+                            : 'var(--color-warning, #d97706)',
+                          fontSize: 'var(--font-size-badge)',
+                          fontWeight: 'var(--font-weight-bold)'
+                        }}>
+                          {item.stock <= 0 ? 'Agotado' : `Stock ${item.stock}`}
+                        </span>
+                      )}
+                    </div>
                     <p style={{
                       fontSize: 'var(--font-size-body-s)',
                       color: 'var(--color-neutral-700)',
@@ -183,6 +289,17 @@ export default function HFCart({
                       color: 'var(--color-primary)'
                     }}>
                       ${item.price.toFixed(2)}
+                    </div>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-1)',
+                      marginTop: 'var(--space-2)',
+                      fontSize: 'var(--font-size-caption)',
+                      color: 'var(--color-primary)'
+                    }}>
+                      Ver detalle
+                      <ChevronRight size={14} />
                     </div>
                   </div>
 
@@ -222,11 +339,12 @@ export default function HFCart({
                     </div>
                     <button 
                     onClick={() => handleQuantityChange(item, 1)}
+                    disabled={item.stock !== null && item.quantity >= item.stock}
                     style={{
                       padding: 'var(--space-2) var(--space-3)',
-                      background: 'transparent',
+                      background: item.stock !== null && item.quantity >= item.stock ? 'var(--color-neutral-200)' : 'transparent',
                       border: 'none',
-                      cursor: 'pointer',
+                      cursor: item.stock !== null && item.quantity >= item.stock ? 'not-allowed' : 'pointer',
                       color: 'var(--color-neutral-700)',
                       transition: 'background 0.2s'
                     }}
@@ -274,30 +392,62 @@ export default function HFCart({
             </div>
 
             {/* Continue Shopping */}
-            <button style={{
+            <div style={{
               marginTop: 'var(--space-5)',
-              padding: 'var(--space-3) var(--space-5)',
-              background: 'white',
-              border: '2px solid var(--color-neutral-300)',
-              borderRadius: 'var(--radius-lg)',
-              fontSize: 'var(--font-size-body-m)',
-              fontWeight: 'var(--font-weight-medium)',
-              color: 'var(--color-neutral-900)',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-            onClick={() => onNavigate?.('catalog')}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-primary)';
-              e.currentTarget.style.color = 'var(--color-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--color-neutral-300)';
-              e.currentTarget.style.color = 'var(--color-neutral-900)';
-            }}
-            >
-              ← Continuar Comprando
-            </button>
+              display: 'flex',
+              gap: 'var(--space-4)',
+              flexWrap: 'wrap'
+            }}>
+              <button style={{
+                flex: '1 1 220px',
+                padding: 'var(--space-3) var(--space-5)',
+                background: 'white',
+                border: '2px solid var(--color-neutral-300)',
+                borderRadius: 'var(--radius-lg)',
+                fontSize: 'var(--font-size-body-m)',
+                fontWeight: 'var(--font-weight-medium)',
+                color: 'var(--color-neutral-900)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onClick={() => onNavigate?.('catalog')}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-primary)';
+                e.currentTarget.style.color = 'var(--color-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-neutral-300)';
+                e.currentTarget.style.color = 'var(--color-neutral-900)';
+              }}
+              >
+                ← Continuar Comprando
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onClearCart?.()}
+                style={{
+                  flex: '1 1 220px',
+                  padding: 'var(--space-3) var(--space-5)',
+                  background: 'white',
+                  border: '2px solid var(--color-error)',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-body-m)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  color: 'var(--color-error)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--color-error-light)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'white';
+                }}
+              >
+                Vaciar carrito
+              </button>
+            </div>
 
             {/* Sección Pedir de Nuevo - Productos Frecuentes */}
             {isAuthenticated && frecuentProducts.length > 0 && (
@@ -448,94 +598,33 @@ export default function HFCart({
                 Resumen del Pedido
               </h2>
 
-              {/* Promo Code */}
-              <div style={{ marginBottom: 'var(--space-5)' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: 'var(--font-size-body-s)',
-                  fontWeight: 'var(--font-weight-medium)',
-                  color: 'var(--color-neutral-900)',
-                  marginBottom: 'var(--space-2)'
-                }}>
-                  Código de Descuento
-                </label>
-                <div style={{
-                  display: 'flex',
-                  gap: 'var(--space-2)'
-                }}>
-                  <div style={{
-                    flex: 1,
-                    position: 'relative'
-                  }}>
-                    <Tag size={18} style={{
-                      position: 'absolute',
-                      left: 'var(--space-3)',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'var(--color-neutral-500)'
-                    }} />
-                    <input
-                      type="text"
-                      placeholder="Ingresa código"
-                      style={{
-                        width: '100%',
-                        padding: 'var(--space-3) var(--space-3) var(--space-3) var(--space-10)',
-                        border: '1px solid var(--color-neutral-300)',
-                        borderRadius: 'var(--radius-lg)',
-                        fontSize: 'var(--font-size-body-m)',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                  <button style={{
-                    padding: '0 var(--space-5)',
-                    background: 'var(--color-neutral-100)',
-                    border: '1px solid var(--color-neutral-300)',
-                    borderRadius: 'var(--radius-lg)',
-                    fontSize: 'var(--font-size-body-m)',
-                    fontWeight: 'var(--font-weight-semibold)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--color-primary-light)';
-                    e.currentTarget.style.borderColor = 'var(--color-primary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'var(--color-neutral-100)';
-                    e.currentTarget.style.borderColor = 'var(--color-neutral-300)';
-                  }}
-                  >
-                    Aplicar
-                  </button>
-                </div>
-              </div>
-
               {/* Totals */}
               <div style={{ marginBottom: 'var(--space-5)' }}>
                 <div style={{
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 'var(--space-3)',
-                  fontSize: 'var(--font-size-body-m)',
-                  color: 'var(--color-neutral-700)'
+                  flexDirection: 'column',
+                  gap: 'var(--space-3)',
+                  marginBottom: 'var(--space-4)'
                 }}>
-                  <span>Subtotal:</span>
-                  <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>
-                    ${subtotal.toFixed(2)}
-                  </span>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginBottom: 'var(--space-4)',
-                  fontSize: 'var(--font-size-body-m)',
-                  color: 'var(--color-neutral-700)'
-                }}>
-                  <span>IVA (13%):</span>
-                  <span style={{ fontWeight: 'var(--font-weight-semibold)' }}>
-                    ${tax.toFixed(2)}
-                  </span>
+                  {cartItems.map((item) => (
+                    <div
+                      key={`summary-${item.id}`}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 'var(--space-4)',
+                        fontSize: 'var(--font-size-body-m)',
+                        color: 'var(--color-neutral-700)'
+                      }}
+                    >
+                      <span style={{ flex: 1 }}>
+                        {item.name} x {item.quantity}
+                      </span>
+                      <span style={{ fontWeight: 'var(--font-weight-semibold)', whiteSpace: 'nowrap' }}>
+                        ${(item.price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
                 <div style={{
                   paddingTop: 'var(--space-4)',
@@ -556,16 +645,17 @@ export default function HFCart({
               {/* Checkout Button */}
               <button 
               onClick={() => onNavigate?.('checkout')}
+              disabled={hasCartWarnings && stockWarnings.every((item) => item.stock <= 0)}
               style={{
                 width: '100%',
                 padding: 'var(--space-4)',
-                background: 'var(--color-primary)',
+                background: hasCartWarnings && stockWarnings.every((item) => item.stock <= 0) ? 'var(--color-neutral-400)' : 'var(--color-primary)',
                 color: 'white',
                 border: 'none',
                 borderRadius: 'var(--radius-lg)',
                 fontSize: 'var(--font-size-h6)',
                 fontWeight: 'var(--font-weight-semibold)',
-                cursor: 'pointer',
+                cursor: hasCartWarnings && stockWarnings.every((item) => item.stock <= 0) ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -584,7 +674,7 @@ export default function HFCart({
                 e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
               }}
               >
-                Proceder al Pago
+                Enviar Pedido
                 <ArrowRight size={20} />
               </button>
 
@@ -598,9 +688,128 @@ export default function HFCart({
                 color: 'var(--color-neutral-900)',
                 textAlign: 'center'
               }}>
-                🔒 Pago seguro • 📦 Recoge en tienda
+                💵 Pago en tienda con efectivo o tarjeta
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Suggestions */}
+        <div style={{ marginTop: 'var(--space-10)' }}>
+          <h2 style={{
+            fontSize: 'var(--font-size-h4)',
+            fontWeight: 'var(--font-weight-semibold)',
+            color: 'var(--color-neutral-900)',
+            marginBottom: 'var(--space-6)'
+          }}>
+            Te podría interesar
+          </h2>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: 'var(--space-5)'
+          }}>
+            {normalizedSuggestions.map((product) => (
+              <div
+                key={product.id}
+                style={{
+                  background: 'white',
+                  borderRadius: 'var(--radius-xl)',
+                  overflow: 'hidden',
+                  border: '1px solid var(--color-neutral-300)',
+                  transition: 'all 0.3s',
+                  cursor: 'pointer'
+                }}
+                onClick={() => onNavigate?.('product-detail', product.id)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = 'var(--shadow-medium)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <div style={{
+                  aspectRatio: '1/1',
+                  background: 'var(--color-neutral-200)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '56px',
+                  overflow: 'hidden'
+                }}>
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        padding: 'var(--space-3)'
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    product.emoji || '🥯'
+                  )}
+                </div>
+                <div style={{ padding: 'var(--space-4)' }}>
+                  <h3 style={{
+                    fontSize: 'var(--font-size-body-m)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--color-neutral-900)',
+                    marginBottom: 'var(--space-2)'
+                  }}>
+                    {product.name}
+                  </h3>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{
+                      fontSize: 'var(--font-size-h6)',
+                      fontWeight: 'var(--font-weight-bold)',
+                      color: 'var(--color-primary)'
+                    }}>
+                      ${Number(product.price).toFixed(2)}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddFrequentProduct?.(product.id);
+                      }}
+                      style={{
+                        padding: 'var(--space-2) var(--space-3)',
+                        background: 'var(--color-primary-light)',
+                        color: 'var(--color-primary)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-lg)',
+                        fontSize: 'var(--font-size-body-s)',
+                        fontWeight: 'var(--font-weight-semibold)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--color-primary)';
+                        e.currentTarget.style.color = 'white';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'var(--color-primary-light)';
+                        e.currentTarget.style.color = 'var(--color-primary)';
+                      }}
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
